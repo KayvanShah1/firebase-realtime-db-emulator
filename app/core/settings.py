@@ -40,7 +40,7 @@ MONGODB_URI = os.getenv("MONGODB_URI")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 
 # Static files like CSS & Media files
-STATIC_ROOT = os.path.join(BASE_DIR, "static")
+STATIC_ROOT = os.path.join(BASE_DIR, "assets")
 
 # E-Mail Settings
 SMTP_TLS = getenv_boolean("SMTP_TLS", True)
