@@ -17,4 +17,5 @@
 	"python.analysis.autoImportUserSymbols": true,
 	"python.analysis.completeFunctionParens": true,
 	"editor.defaultFormatter": null,
+	"python.linting.pylintEnabled": false,
 }
