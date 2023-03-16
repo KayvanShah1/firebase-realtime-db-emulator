@@ -1,1 +1,1 @@
-# firebase-emulator
+# Firebase Realtime Database Emulator
