@@ -43,3 +43,7 @@ body {
 	color: #fff;
 	border-bottom-color: #fff;
 }
+
+.dropdown-item {
+	text-shadow: none;
+}
