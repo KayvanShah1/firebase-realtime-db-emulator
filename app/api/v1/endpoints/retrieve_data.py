@@ -64,3 +64,33 @@ async def post_data(path: str, data: dict):
             detail="Internal Server Error",
         )
     return {"name": id}
+
+
+@router.put(
+    "/{path:path}.json",
+    status_code=status.HTTP_201_CREATED,
+    response_model=PostDataResponse,
+    response_description="Sucessfully created data document",
+)
+async def put_data(path: str, data: dict):
+    return None
+
+
+@router.patch(
+    "/{path:path}.json",
+    status_code=status.HTTP_201_CREATED,
+    response_model=PostDataResponse,
+    response_description="Sucessfully created data document",
+)
+async def update_data(path: str, data: dict):
+    return None
+
+
+@router.delete(
+    "/{path:path}.json",
+    status_code=status.HTTP_201_CREATED,
+    response_model=PostDataResponse,
+    response_description="Sucessfully created data document",
+)
+async def delete_data(path: str, data: dict):
+    return None
