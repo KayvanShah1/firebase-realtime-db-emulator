@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+import secrets
 
 load_dotenv()
 
@@ -21,7 +22,7 @@ APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE_DIR = os.path.dirname(APP_DIR)
 
 # Authentication & Security
-SECRET_KEY = os.getenvb(b"SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY", default=secrets.token_urlsafe(32))
 if not SECRET_KEY:
     SECRET_KEY = os.urandom(32)
 

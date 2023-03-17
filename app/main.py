@@ -7,7 +7,9 @@ from app.api.v1.api import api_router as api_v1_router
 from app.core import settings
 
 
-app = FastAPI(title=settings.PROJECT_NAME)
+app = FastAPI(
+    title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_PREFIX}/openapi.json"
+)
 
 # Handle CORS protection
 origins = settings.BACKEND_CORS_ORIGINS
