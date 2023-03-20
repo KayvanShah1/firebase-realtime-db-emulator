@@ -83,7 +83,7 @@ async def put_data_root(data: dict):
     response_description="Sucessfully deleted data",
 )
 async def delete_data_root():
-    base_collection.drop()
+    await base_collection.drop()
     return None
 
 
