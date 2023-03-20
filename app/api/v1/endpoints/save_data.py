@@ -1,6 +1,6 @@
-import traceback
 import uuid
 from fastapi import APIRouter, HTTPException, status
+
 
 from app.db.database import base_collection
 from app.schemas.data import PostDataResponse
@@ -24,25 +24,77 @@ async def _if_structure_exists(collection, key: str):
     return False
 
 
-@router.post(
-    "/{path:path}.json",
-    status_code=status.HTTP_201_CREATED,
-    response_model=PostDataResponse,
-    response_description="Sucessfully created data document",
-)
-async def post_data(path: str, data: str | list | dict | None = None):
-    if data is None:
+def _check_empty_payload(payload):
+    """_summary_
+
+    Args:
+        payload (_type_): _description_
+
+    Raises:
+        HTTPException: _description_
+    """
+    if payload is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Data cannot be None"
         )
 
-    path_components = path.strip("/").split("/")
+
+@router.post(
+    "/.json",
+    status_code=status.HTTP_200_OK,
+    response_model=PostDataResponse,
+    response_description="Sucessfully created data document",
+)
+async def push_data_root(data: str | list | dict = None):
+    _check_empty_payload(data)
+
+    # Create a new ID for data to insert
+    id = uuid.uuid4().hex
+    data = {id: data}
+
+    collection = base_collection
+
+    # Push Data
+    new_data = await collection.insert_one(data)
+    # Validation
+    valid = await collection.find_one({"_id": new_data.inserted_id})
+
+    if not valid:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
+    return {"name": id}
+
+
+@router.delete(
+    "/.json",
+    status_code=status.HTTP_200_OK,
+    response_model=PostDataResponse,
+    response_description="Sucessfully deleted data",
+)
+async def delete_data_root():
+    base_collection.drop()
+    return None
+
+
+@router.post(
+    "/{path:path}.json",
+    status_code=status.HTTP_200_OK,
+    response_model=PostDataResponse,
+    response_description="Sucessfully created data document",
+)
+async def post_data(path: str, data: str | list | dict = None):
+    _check_empty_payload(data)
+
     # collection = get_collection(path_components[0])
     collection = base_collection
 
     # Create a new ID for data to insert
     id = uuid.uuid4().hex
     data = {id: data}
+
+    path_components = path.strip("/").split("/")
 
     # Traverse over the path components
     nested_key = ".".join(path_components)
@@ -69,30 +121,6 @@ async def post_data(path: str, data: str | list | dict | None = None):
         new_data = await collection.insert_one(data)
         # Validation
         valid = await collection.find_one({"_id": new_data.inserted_id})
-
-    if not valid:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error",
-        )
-    return {"name": id}
-
-
-@router.post(
-    "/.json",
-    status_code=status.HTTP_201_CREATED,
-    response_model=PostDataResponse,
-    response_description="Sucessfully created data document",
-)
-async def post_data_root(data: str | list | dict | None = None):
-    # Create a new ID for data to insert
-    id = uuid.uuid4().hex
-    data = {id: data}
-
-    # Push Data
-    new_data = await base_collection.insert_one(data)
-    # Validation
-    valid = await base_collection.find_one({"_id": new_data.inserted_id})
 
     if not valid:
         raise HTTPException(
