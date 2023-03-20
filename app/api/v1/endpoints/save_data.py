@@ -85,11 +85,6 @@ async def post_data(path: str, data: str | list | dict | None = None):
     response_description="Sucessfully created data document",
 )
 async def post_data_root(data: str | list | dict | None = None):
-    if data is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Data cannot be None"
-        )
-
     # Create a new ID for data to insert
     id = uuid.uuid4().hex
     data = {id: data}
