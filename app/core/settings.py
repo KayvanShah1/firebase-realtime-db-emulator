@@ -31,7 +31,7 @@ BACKEND_CORS_ORIGINS = eval(os.getenv("BACKEND_CORS_ORIGINS"))
 ALGORITHM = os.getenv("ALGORITHM")
 
 # General Details
-PROJECT_NAME = os.getenv("PROJECT_NAME", "Firebase Emulator")
+PROJECT_NAME = os.getenv("PROJECT_NAME", "FireMongo")
 API_V1_PREFIX = "/api/v1"
 
 # Database Settings
