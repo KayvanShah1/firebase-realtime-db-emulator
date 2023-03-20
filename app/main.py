@@ -8,7 +8,9 @@ from app.core import settings
 
 
 app = FastAPI(
-    title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_PREFIX}/openapi.json"
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
+    description="Firebase Realtime Database RestFul API Emulator",
 )
 
 # Handle CORS protection
