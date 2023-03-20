@@ -67,10 +67,19 @@ async def push_data_root(data: str | list | dict = None):
     return {"name": id}
 
 
+@router.put(
+    "/.json",
+    status_code=status.HTTP_201_CREATED,
+    response_model=PostDataResponse,
+    response_description="Sucessfully created data document",
+)
+async def put_data_root(data: dict):
+    return None
+
+
 @router.delete(
     "/.json",
     status_code=status.HTTP_200_OK,
-    response_model=PostDataResponse,
     response_description="Sucessfully deleted data",
 )
 async def delete_data_root():
@@ -96,7 +105,7 @@ async def post_data(path: str, data: str | list | dict = None):
 
     path_components = path.strip("/").split("/")
 
-    # Traverse over the path components
+    # Recreate MongoDB style key
     nested_key = ".".join(path_components)
     if await _if_structure_exists(collection, nested_key):
         existing_data = await collection.find_one({nested_key: {"$exists": True}})
@@ -115,6 +124,7 @@ async def post_data(path: str, data: str | list | dict = None):
         if new_data.modified_count > 0:
             valid = True
     else:
+        # Traverse over the path components
         for key in path_components[::-1]:
             data = {key: data}
         # Push Data
@@ -152,9 +162,37 @@ async def update_data(path: str, data: dict):
 
 @router.delete(
     "/{path:path}.json",
-    status_code=status.HTTP_201_CREATED,
-    response_model=PostDataResponse,
-    response_description="Sucessfully created data document",
+    status_code=status.HTTP_200_OK,
+    response_description="Sucessfully deleted",
 )
-async def delete_data(path: str, data: dict):
+async def delete_data(path: str):
+    # collection = get_collection(path_components[0])
+    collection = base_collection
+
+    path_components = path.strip("/").split("/")
+
+    # Recreate MongoDB style key
+    nested_key = ".".join(path_components)
+    if await _if_structure_exists(collection, nested_key):
+        # Find the existing document id
+        existing_data = await collection.find_one({nested_key: {"$exists": True}})
+
+        # If retrieved document is not NULL
+        if existing_data is not None:
+            # Drop the field from document
+            _id = existing_data["_id"]
+            result = await collection.update_one(
+                {"_id": _id}, {"$unset": {nested_key: ""}}
+            )
+
+            # Confirm the modification
+            modified_doc = await collection.find_one({"_id": _id})
+            if modified_doc is not None:
+                # Delete the document if only "_id" is there
+                if len(modified_doc.keys()) == 1:
+                    await collection.delete_one({"_id": modified_doc["_id"]})
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Key doesn't exist"
+        )
     return None
