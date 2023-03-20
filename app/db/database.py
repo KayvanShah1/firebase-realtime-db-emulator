@@ -1,16 +1,22 @@
+from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
 
 from app.core.settings import MONGODB_URI
 
 try:
-    client = AsyncIOMotorClient(MONGODB_URI)
-except Exception as e:
-    print(
-        """Unable to connect to Async Mongo Motor...
-    Connecting to simple Motor"""
+    try:
+        client = AsyncIOMotorClient(MONGODB_URI)
+    except Exception as e:
+        print(
+            """Unable to connect to Async Mongo Motor... Connecting to standard Motor"""
+        )
+        client = MongoClient(MONGODB_URI)
+except Exception:
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Failed to establish connection with client.",
     )
-    client = MongoClient(MONGODB_URI)
 
 db = client["firebase_db"]
 
