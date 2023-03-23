@@ -299,6 +299,13 @@ async def delete_data(path: str):
             result = await collection.update_one(
                 {"_id": _id}, {"$unset": {nested_key: ""}}
             )
+            # Validate the upserted data
+            if (
+                result.modified_count > 0
+                or result.matched_count > 0
+                or result.upserted_id
+            ):
+                valid = True
 
             # Confirm the modification
             modified_doc = await collection.find_one({"_id": _id})
@@ -306,6 +313,12 @@ async def delete_data(path: str):
                 # Delete the document if only "_id" is there
                 if len(modified_doc.keys()) == 1:
                     await collection.delete_one({"_id": modified_doc["_id"]})
+
+        if not valid:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal Server Error",
+            )
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Key doesn't exist"
