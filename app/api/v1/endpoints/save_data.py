@@ -77,8 +77,8 @@ async def put_data_root(
 ) -> str | list | dict | bool:
     _check_empty_payload(data)
     og_data = data
-    # collection = base_collection
-    collection = get_collection("demo")
+    collection = base_collection
+    # collection = get_collection("demo")
     await collection.drop()
     # Push Data
     new_data = await collection.insert_one(data)
@@ -214,12 +214,65 @@ async def put_data(
 
 @router.patch(
     "/{path:path}.json",
-    status_code=status.HTTP_201_CREATED,
-    response_model=PostDataResponse,
+    status_code=status.HTTP_200_OK,
     response_description="Sucessfully created data document",
 )
-async def update_data(path: str, data: dict):
-    return None
+async def update_data(
+    path: str, data: str | list | dict | bool = None
+) -> str | list | dict | bool:
+    collection = base_collection
+    og_data = data
+
+    # Recreate MongoDB style key
+    path_components = path.strip("/").split("/")
+    nested_key = ".".join(path_components)
+    parent_key = ".".join(path_components[:-1])
+    if len(parent_key) == 0:
+        parent_key = nested_key
+
+    if await _if_structure_exists(collection, parent_key):
+        existing_data = await collection.find_one({parent_key: {"$exists": True}})
+        _id = existing_data["_id"]
+
+        # Check if data key has path component
+        if type(data) is dict:
+            _is_path_componment_data = [
+                True if "/" in k else False for k in data.keys()
+            ]
+            if True in _is_path_componment_data:
+                setter = {
+                    f"{nested_key}.{k.replace('/', '.')}": v for k, v in data.items()
+                }
+            else:
+                setter = {nested_key: data}
+        else:
+            setter = {nested_key: data}
+        # Update existing sub-document
+        new_data = await collection.update_one(
+            {"_id": _id}, {"$set": setter}, upsert=True
+        )
+        # Validate the upserted data
+        if (
+            new_data.modified_count > 0
+            or new_data.matched_count > 0
+            or new_data.upserted_id
+        ):
+            valid = True
+    else:
+        # Traverse over the path components
+        for key in path_components[::-1]:
+            data = {key: data}
+        # Push Data
+        new_data = await collection.insert_one(data)
+        # Validation
+        valid = await collection.find_one({"_id": new_data.inserted_id})
+
+    if not valid:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
+    return og_data
 
 
 @router.delete(
