@@ -69,11 +69,26 @@ async def push_data_root(data: str | list | dict = None) -> dict:
 
 @router.put(
     "/.json",
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_200_OK,
     response_description="Sucessfully created data document",
 )
-async def put_data_root(data: str | list | dict = None) -> dict:
-    return None
+async def put_data_root(data: str | list | dict = None) -> str | list | dict:
+    _check_empty_payload(data)
+    og_data = data
+    # collection = base_collection
+    collection = get_collection("demo")
+    await collection.drop()
+    # Push Data
+    new_data = await collection.insert_one(data)
+    # Validation
+    valid = await collection.find_one({"_id": new_data.inserted_id}, {"_id": 0})
+
+    if not valid:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
+    return og_data
 
 
 @router.delete(
@@ -145,30 +160,29 @@ async def post_data(path: str, data: str | list | dict = None) -> dict:
 
 @router.put(
     "/{path:path}.json",
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_200_OK,
     response_description="Sucessfully created data document",
 )
-async def put_data(path: str, data: str | list | dict = None) -> dict:
+async def put_data(path: str, data: str | list | dict = None) -> str | list | dict:
     _check_empty_payload(data)
 
     collection = base_collection
     og_data = data
 
-    path_components = path.strip("/").split("/")
     # Recreate MongoDB style key
+    path_components = path.strip("/").split("/")
     nested_key = ".".join(path_components)
-    if await _if_structure_exists(collection, nested_key):
-        existing_data = await collection.find_one({nested_key: {"$exists": True}})
-        _id = existing_data["_id"]
+    parent_key = ".".join(path_components[:-1])
+    if len(parent_key) == 0:
+        parent_key = nested_key
 
-        # Traverse and update existing sub-document
-        for key in path_components:
-            existing_data = existing_data[key]
-        existing_data.update(data)
+    if await _if_structure_exists(collection, parent_key):
+        existing_data = await collection.find_one({parent_key: {"$exists": True}})
+        _id = existing_data["_id"]
 
         # Update existing sub-document
         new_data = await collection.update_one(
-            {"_id": _id}, {"$set": {nested_key: existing_data}}, upsert=True
+            {"_id": _id}, {"$set": {nested_key: data}}, upsert=True
         )
         # Validate the upserted data
         if (
