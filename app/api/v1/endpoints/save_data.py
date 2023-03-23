@@ -215,7 +215,7 @@ async def put_data(
 @router.patch(
     "/{path:path}.json",
     status_code=status.HTTP_200_OK,
-    response_description="Sucessfully created data document",
+    response_description="Sucessfully updated data",
 )
 async def update_data(
     path: str, data: str | list | dict | bool = None
