@@ -45,7 +45,7 @@ def _check_empty_payload(payload) -> Exception:
     response_model=PostDataResponse,
     response_description="Sucessfully created data document",
 )
-async def push_data_root(data: str | list | dict = None) -> dict:
+async def push_data_root(data: str | list | dict | bool = None) -> dict:
     _check_empty_payload(data)
 
     # Create a new ID for data to insert
@@ -72,7 +72,9 @@ async def push_data_root(data: str | list | dict = None) -> dict:
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully created data document",
 )
-async def put_data_root(data: str | list | dict = None) -> str | list | dict:
+async def put_data_root(
+    data: str | list | dict | bool = None,
+) -> str | list | dict | bool:
     _check_empty_payload(data)
     og_data = data
     # collection = base_collection
@@ -107,7 +109,7 @@ async def delete_data_root() -> None:
     response_model=PostDataResponse,
     response_description="Sucessfully created data document",
 )
-async def post_data(path: str, data: str | list | dict = None) -> dict:
+async def post_data(path: str, data: str | list | dict | bool = None) -> dict:
     _check_empty_payload(data)
 
     # collection = get_collection(path_components[0])
@@ -163,7 +165,9 @@ async def post_data(path: str, data: str | list | dict = None) -> dict:
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully created data document",
 )
-async def put_data(path: str, data: str | list | dict = None) -> str | list | dict:
+async def put_data(
+    path: str, data: str | list | dict | bool = None
+) -> str | list | dict | bool:
     _check_empty_payload(data)
 
     collection = base_collection
