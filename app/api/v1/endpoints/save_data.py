@@ -2,13 +2,13 @@ import uuid
 from fastapi import APIRouter, HTTPException, status
 
 
-from app.db.database import base_collection
+from app.db.database import base_collection, get_collection
 from app.schemas.data import PostDataResponse
 
 router = APIRouter()
 
 
-async def _if_structure_exists(collection, key: str):
+async def _if_structure_exists(collection, key: str) -> bool:
     """_summary_
 
     Args:
@@ -24,7 +24,7 @@ async def _if_structure_exists(collection, key: str):
     return False
 
 
-def _check_empty_payload(payload):
+def _check_empty_payload(payload) -> Exception:
     """_summary_
 
     Args:
@@ -45,7 +45,7 @@ def _check_empty_payload(payload):
     response_model=PostDataResponse,
     response_description="Sucessfully created data document",
 )
-async def push_data_root(data: str | list | dict = None):
+async def push_data_root(data: str | list | dict = None) -> dict:
     _check_empty_payload(data)
 
     # Create a new ID for data to insert
@@ -70,10 +70,9 @@ async def push_data_root(data: str | list | dict = None):
 @router.put(
     "/.json",
     status_code=status.HTTP_201_CREATED,
-    response_model=PostDataResponse,
     response_description="Sucessfully created data document",
 )
-async def put_data_root(data: dict):
+async def put_data_root(data: str | list | dict = None) -> dict:
     return None
 
 
@@ -82,7 +81,7 @@ async def put_data_root(data: dict):
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully deleted data",
 )
-async def delete_data_root():
+async def delete_data_root() -> None:
     await base_collection.drop()
     return None
 
@@ -93,7 +92,7 @@ async def delete_data_root():
     response_model=PostDataResponse,
     response_description="Sucessfully created data document",
 )
-async def post_data(path: str, data: str | list | dict = None):
+async def post_data(path: str, data: str | list | dict = None) -> dict:
     _check_empty_payload(data)
 
     # collection = get_collection(path_components[0])
@@ -121,7 +120,11 @@ async def post_data(path: str, data: str | list | dict = None):
             {"_id": _id}, {"$set": {nested_key: existing_data}}, upsert=True
         )
         # Validate the upserted data
-        if new_data.modified_count > 0:
+        if (
+            new_data.modified_count > 0
+            or new_data.matched_count > 0
+            or new_data.upserted_id
+        ):
             valid = True
     else:
         # Traverse over the path components
@@ -143,11 +146,52 @@ async def post_data(path: str, data: str | list | dict = None):
 @router.put(
     "/{path:path}.json",
     status_code=status.HTTP_201_CREATED,
-    response_model=PostDataResponse,
     response_description="Sucessfully created data document",
 )
-async def put_data(path: str, data: dict):
-    return None
+async def put_data(path: str, data: str | list | dict = None) -> dict:
+    _check_empty_payload(data)
+
+    collection = base_collection
+    og_data = data
+
+    path_components = path.strip("/").split("/")
+    # Recreate MongoDB style key
+    nested_key = ".".join(path_components)
+    if await _if_structure_exists(collection, nested_key):
+        existing_data = await collection.find_one({nested_key: {"$exists": True}})
+        _id = existing_data["_id"]
+
+        # Traverse and update existing sub-document
+        for key in path_components:
+            existing_data = existing_data[key]
+        existing_data.update(data)
+
+        # Update existing sub-document
+        new_data = await collection.update_one(
+            {"_id": _id}, {"$set": {nested_key: existing_data}}, upsert=True
+        )
+        # Validate the upserted data
+        if (
+            new_data.modified_count > 0
+            or new_data.matched_count > 0
+            or new_data.upserted_id
+        ):
+            valid = True
+    else:
+        # Traverse over the path components
+        for key in path_components[::-1]:
+            data = {key: data}
+        # Push Data
+        new_data = await collection.insert_one(data)
+        # Validation
+        valid = await collection.find_one({"_id": new_data.inserted_id})
+
+    if not valid:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
+    return og_data
 
 
 @router.patch(
