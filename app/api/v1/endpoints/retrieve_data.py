@@ -25,8 +25,8 @@ async def query_data_root(
 ):
     # collection = get_collection()
     collection = base_collection
-    return get_data(
-        path="",
+    result = await get_data(
+        path=None,
         collection=collection,
         orderBy=orderBy,
         limitToFirst=limitToFirst,
@@ -35,6 +35,7 @@ async def query_data_root(
         startAt=startAt,
         endAt=endAt,
     )
+    return result
 
 
 @router.get(
@@ -53,7 +54,7 @@ async def query_data(
 ):
     # collection = get_collection()
     collection = base_collection
-    return get_data(
+    result = await get_data(
         path=path,
         collection=collection,
         orderBy=orderBy,
@@ -63,3 +64,4 @@ async def query_data(
         startAt=startAt,
         endAt=endAt,
     )
+    return result
