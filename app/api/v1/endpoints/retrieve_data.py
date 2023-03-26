@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.encoders import jsonable_encoder
 
 from app.db.database import get_collection, base_collection
+from app.crud.mongo import get_data
 
 router = APIRouter()
 
@@ -22,21 +23,18 @@ async def query_data_root(
     startAt: Optional[int | str | None] = None,
     endAt: Optional[int | str | None] = None,
 ):
-    """_summary_
-
-    Args:
-        path (str): _description_
-        orderBy (Optional[str  |  None], optional): _description_. Defaults to None.
-        limitToFirst (Optional[int  |  None], optional): _description_. Defaults to None.
-        limitToLast (Optional[int  |  None], optional): _description_. Defaults to None.
-        equalTo (Optional[int  |  str  |  None], optional): _description_. Defaults to None.
-        startAt (Optional[int  |  str  |  None], optional): _description_. Defaults to None.
-        endAt (Optional[int  |  str  |  None], optional): _description_. Defaults to None.
-
-    Returns:
-        _type_: _description_
-    """
-    return {"Message": "Done"}
+    # collection = get_collection()
+    collection = base_collection
+    return get_data(
+        path="",
+        collection=collection,
+        orderBy=orderBy,
+        limitToFirst=limitToFirst,
+        limitToLast=limitToLast,
+        equalTo=equalTo,
+        startAt=startAt,
+        endAt=endAt,
+    )
 
 
 @router.get(
@@ -53,18 +51,15 @@ async def query_data(
     startAt: Optional[int | str | None] = None,
     endAt: Optional[int | str | None] = None,
 ):
-    """_summary_
-
-    Args:
-        path (str): _description_
-        orderBy (Optional[str  |  None], optional): _description_. Defaults to None.
-        limitToFirst (Optional[int  |  None], optional): _description_. Defaults to None.
-        limitToLast (Optional[int  |  None], optional): _description_. Defaults to None.
-        equalTo (Optional[int  |  str  |  None], optional): _description_. Defaults to None.
-        startAt (Optional[int  |  str  |  None], optional): _description_. Defaults to None.
-        endAt (Optional[int  |  str  |  None], optional): _description_. Defaults to None.
-
-    Returns:
-        _type_: _description_
-    """
-    return {"Message": path}
+    # collection = get_collection()
+    collection = base_collection
+    return get_data(
+        path=path,
+        collection=collection,
+        orderBy=orderBy,
+        limitToFirst=limitToFirst,
+        limitToLast=limitToLast,
+        equalTo=equalTo,
+        startAt=startAt,
+        endAt=endAt,
+    )
