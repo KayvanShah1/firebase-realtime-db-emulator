@@ -33,6 +33,7 @@ ALGORITHM = os.getenv("ALGORITHM")
 # General Details
 PROJECT_NAME = os.getenv("PROJECT_NAME", "FireMongo")
 API_V1_PREFIX = "/api/v1"
+API_V2_PREFIX = "/api/v2"
 
 # Database Settings
 MONGODB_URI = os.getenv("MONGODB_URI")
