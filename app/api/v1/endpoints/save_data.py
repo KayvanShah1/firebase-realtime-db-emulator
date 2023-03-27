@@ -123,18 +123,27 @@ async def post_data(path: str, data: str | list | dict | bool = None) -> dict:
 
     # Recreate MongoDB style key
     nested_key = ".".join(path_components)
-    if await _if_structure_exists(collection, nested_key):
-        existing_data = await collection.find_one({nested_key: {"$exists": True}})
+    parent_key = ".".join(path_components[:-1])
+    if len(parent_key) == 0:
+        parent_key = nested_key
+    if await _if_structure_exists(collection, parent_key):
+        existing_data = await collection.find_one({parent_key: {"$exists": True}})
         _id = existing_data["_id"]
 
         # Traverse and update existing sub-document
-        for key in path_components:
+        for key in path_components[:-1]:
             existing_data = existing_data[key]
+        if not path_components[-1] in existing_data.keys():
+            data = {path_components[-1]: data}
+            _update_key = parent_key
+        else:
+            existing_data = existing_data[path_components[-1]]
+            _update_key = nested_key
         existing_data.update(data)
 
         # Update existing sub-document
         new_data = await collection.update_one(
-            {"_id": _id}, {"$set": {nested_key: existing_data}}, upsert=True
+            {"_id": _id}, {"$set": {_update_key: existing_data}}, upsert=True
         )
         # Validate the upserted data
         if (
