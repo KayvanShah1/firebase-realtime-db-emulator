@@ -1,7 +1,8 @@
 import uuid
+
 from fastapi import APIRouter, HTTPException, status
 
-
+from app.core import settings
 from app.db.database import base_collection, get_collection
 from app.schemas.data import PostDataResponse
 
@@ -37,6 +38,10 @@ def _check_empty_payload(payload) -> Exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Data cannot be None"
         )
+
+
+def replace_prefix(path):
+    return path.replace(settings.API_V1_PREFIX, "")
 
 
 @router.post(
@@ -110,6 +115,7 @@ async def delete_data_root() -> None:
     response_description="Sucessfully created data document",
 )
 async def post_data(path: str, data: str | list | dict | bool = None) -> dict:
+    path = replace_prefix(path)
     _check_empty_payload(data)
 
     # collection = get_collection(path_components[0])
@@ -177,6 +183,7 @@ async def post_data(path: str, data: str | list | dict | bool = None) -> dict:
 async def put_data(
     path: str, data: str | list | dict | bool = None
 ) -> str | list | dict | bool:
+    path = replace_prefix(path)
     _check_empty_payload(data)
 
     collection = base_collection
@@ -229,6 +236,7 @@ async def put_data(
 async def update_data(
     path: str, data: str | list | dict | bool = None
 ) -> str | list | dict | bool:
+    path = replace_prefix(path)
     collection = base_collection
     og_data = data
 
@@ -290,6 +298,7 @@ async def update_data(
     response_description="Sucessfully deleted",
 )
 async def delete_data(path: str):
+    path = replace_prefix(path)
     # collection = get_collection(path_components[0])
     collection = base_collection
 
