@@ -26,9 +26,9 @@ app.add_middleware(
 
 # register all the APIRouter Endpoints
 app.include_router(templates.router)
-app.include_router(api_v1_router, prefix=settings.API_V1_PREFIX, deprecated=True)
-# app.include_router(api_v2_router, prefix=settings.API_V2_PREFIX, deprecated=True)
 app.include_router(api_v2_router)
+# app.include_router(api_v2_router, prefix=settings.API_V2_PREFIX, deprecated=True)
+app.include_router(api_v1_router, prefix=settings.API_V1_PREFIX, deprecated=True)
 
 # Static Files and Templates
 app.mount("/static", StaticFiles(directory=settings.STATIC_ROOT), name="static")
