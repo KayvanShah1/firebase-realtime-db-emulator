@@ -26,7 +26,7 @@ app.add_middleware(
 
 # register all the APIRouter Endpoints
 app.include_router(templates.router)
-app.include_router(api_v1_router, prefix=settings.API_V1_PREFIX)
+app.include_router(api_v1_router, prefix=settings.API_V1_PREFIX, deprecated=True)
 # app.include_router(api_v1_router)
 
 # Static Files and Templates
