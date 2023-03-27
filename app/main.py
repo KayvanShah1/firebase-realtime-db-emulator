@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api import templates
 from app.api.v1.api import api_router as api_v1_router
+from app.api.v2.api import api_router as api_v2_router
 from app.core import settings
 
 
@@ -27,7 +28,8 @@ app.add_middleware(
 # register all the APIRouter Endpoints
 app.include_router(templates.router)
 app.include_router(api_v1_router, prefix=settings.API_V1_PREFIX, deprecated=True)
-# app.include_router(api_v1_router)
+# app.include_router(api_v2_router, prefix=settings.API_V2_PREFIX, deprecated=True)
+app.include_router(api_v2_router)
 
 # Static Files and Templates
 app.mount("/static", StaticFiles(directory=settings.STATIC_ROOT), name="static")
