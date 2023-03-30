@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import retrieve_data, save_data
+from app.api.v2.endpoints import retrieve_data, save_data
 
 api_router = APIRouter()
 api_router.include_router(save_data.router, tags=["Save Data"])
