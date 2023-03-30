@@ -1,0 +1,16 @@
+/collection/a/b/c
+collection = collection
+_fm_id = a 
+nested_key = _fm_val.b.c
+
+------------------------------------
+/collection/a
+collection = collection
+_fm_id = a 
+nested_key = _fm_val
+
+------------------------------------
+/collection
+collection = collection
+_fm_id = data.keys()
+_fm_val = data.values()
