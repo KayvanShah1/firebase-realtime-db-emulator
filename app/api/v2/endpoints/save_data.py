@@ -35,7 +35,16 @@ def _check_empty_payload(payload) -> Exception:
     """
     if payload is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Data cannot be None"
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Data cannot be None",
+        )
+
+
+def _check_data_type_for_root(data) -> Exception:
+    if type(data) is not dict:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Data type other than dict is not supported in MongoDB",
         )
 
 
@@ -45,19 +54,21 @@ def _check_empty_payload(payload) -> Exception:
     response_model=PostDataResponse,
     response_description="Sucessfully created data document",
 )
-async def push_data_root(data: str | list | dict | bool = None) -> dict:
+async def post_data_root_v2(data: dict = None) -> dict:
     _check_empty_payload(data)
 
     # Create a new ID for data to insert
     id = uuid.uuid4().hex
-    data = {id: data}
+    collection = get_collection(id)
 
-    collection = base_collection
+    valid = True
+    # Create and Insert the documents
+    docs = [{"_fm_id": k, "_fm_val": v} for k, v in data.items()]
+    result = await collection.insert_many(docs, ordered=False)
 
-    # Push Data
-    new_data = await collection.insert_one(data)
-    # Validation
-    valid = await collection.find_one({"_id": new_data.inserted_id})
+    # Validate the insertion
+    if len(result.inserted_ids) != len(docs):
+        valid = False
 
     if not valid:
         raise HTTPException(
@@ -72,18 +83,33 @@ async def push_data_root(data: str | list | dict | bool = None) -> dict:
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully created data document",
 )
-async def put_data_root(
-    data: str | list | dict | bool = None,
-) -> str | list | dict | bool:
+async def put_data_root_v2(
+    data: dict = None,
+) -> dict:
     _check_empty_payload(data)
     og_data = data
-    collection = base_collection
-    # collection = get_collection("demo")
-    await collection.drop()
-    # Push Data
-    new_data = await collection.insert_one(data)
-    # Validation
-    valid = await collection.find_one({"_id": new_data.inserted_id}, {"_id": 0})
+    valid = True
+    if type(data) == dict:
+        for key, val in data.items():
+            # Find and drop old collection with same names
+            collection = get_collection(key)
+            await collection.drop()
+
+            # Validate and prepare the documents
+            _check_data_type_for_root(val)
+            docs = [{"_fm_id": k, "_fm_val": v} for k, v in val.items()]
+            # Insert the documents
+            result = await collection.insert_many(docs, ordered=False)
+
+            # Validate the insertion
+            if len(result.inserted_ids) != len(docs):
+                valid = False
+
+    if type(data) == list:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Pushing list on root level is not allowed",
+        )
 
     if not valid:
         raise HTTPException(
@@ -98,7 +124,7 @@ async def put_data_root(
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully deleted data",
 )
-async def delete_data_root() -> None:
+async def delete_data_root_v2() -> None:
     await base_collection.drop()
     return None
 
@@ -109,7 +135,7 @@ async def delete_data_root() -> None:
     response_model=PostDataResponse,
     response_description="Sucessfully created data document",
 )
-async def post_data(path: str, data: str | list | dict | bool = None) -> dict:
+async def post_data_v2(path: str, data: str | list | dict | bool = None) -> dict:
     _check_empty_payload(data)
 
     # collection = get_collection(path_components[0])
@@ -174,50 +200,25 @@ async def post_data(path: str, data: str | list | dict | bool = None) -> dict:
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully created data document",
 )
-async def put_data(
-    path: str, data: str | list | dict | bool = None
-) -> str | list | dict | bool:
+async def put_data_v2(
+    path: str, data: int | float | str | list | dict | bool = None
+) -> int | float | str | list | dict | bool:
     _check_empty_payload(data)
-
-    collection = base_collection
     og_data = data
 
     # Recreate MongoDB style key
     path_components = path.strip("/").split("/")
-    nested_key = ".".join(path_components)
-    parent_key = ".".join(path_components[:-1])
-    if len(parent_key) == 0:
-        parent_key = nested_key
 
-    if await _if_structure_exists(collection, parent_key):
-        existing_data = await collection.find_one({parent_key: {"$exists": True}})
-        _id = existing_data["_id"]
+    # Collection name
+    collection = get_collection(path_components[0])
 
-        # Update existing sub-document
-        new_data = await collection.update_one(
-            {"_id": _id}, {"$set": {nested_key: data}}, upsert=True
-        )
-        # Validate the upserted data
-        if (
-            new_data.modified_count > 0
-            or new_data.matched_count > 0
-            or new_data.upserted_id
-        ):
-            valid = True
-    else:
-        # Traverse over the path components
-        for key in path_components[::-1]:
-            data = {key: data}
-        # Push Data
-        new_data = await collection.insert_one(data)
-        # Validation
-        valid = await collection.find_one({"_id": new_data.inserted_id})
+    if len(path_components) >= 1:
+        nested_key = ".".join(path_components[1:])
+        parent_key = ".".join(path_components[1:-1])
 
-    if not valid:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error",
-        )
+        if len(parent_key) == 0:
+            parent_key = nested_key
+
     return og_data
 
 
@@ -226,7 +227,7 @@ async def put_data(
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully updated data",
 )
-async def update_data(
+async def update_data_v2(
     path: str, data: str | list | dict | bool = None
 ) -> str | list | dict | bool:
     collection = base_collection
@@ -289,7 +290,7 @@ async def update_data(
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully deleted",
 )
-async def delete_data(path: str):
+async def delete_data_v2(path: str):
     # collection = get_collection(path_components[0])
     collection = base_collection
 

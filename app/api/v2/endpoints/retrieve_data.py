@@ -15,7 +15,7 @@ router = APIRouter()
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully fetched data",
 )
-async def query_data_root(
+async def query_data_root_v2(
     orderBy: Optional[str | None] = None,
     limitToFirst: Optional[int | None] = None,
     limitToLast: Optional[int | None] = None,
@@ -43,7 +43,7 @@ async def query_data_root(
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully fetched data",
 )
-async def query_data(
+async def query_data_v2(
     path: str,
     orderBy: Optional[str | None] = None,
     limitToFirst: Optional[int | None] = None,

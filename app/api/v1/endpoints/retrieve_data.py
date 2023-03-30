@@ -6,6 +6,9 @@ from fastapi.encoders import jsonable_encoder
 
 from app.db.database import get_collection, base_collection
 from app.crud.mongo import get_data
+from app.api.v1.endpoints.utils import (
+    replace_prefix,
+)
 
 router = APIRouter()
 
@@ -53,6 +56,7 @@ async def query_data(
     endAt: Optional[int | str | None] = None,
 ):
     # collection = get_collection()
+    path = replace_prefix(path)
     collection = base_collection
     result = await get_data(
         path=path,
