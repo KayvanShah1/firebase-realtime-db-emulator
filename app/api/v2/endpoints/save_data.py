@@ -7,7 +7,7 @@ from app.api.v2.endpoints.utils import (
     _if_structure_exists,
 )
 
-from app.db.database import base_collection, get_collection
+from app.db.database import get_collection, db, base_collection
 from app.schemas.data import PostDataResponse
 
 router = APIRouter()
@@ -19,7 +19,9 @@ router = APIRouter()
     response_model=PostDataResponse,
     response_description="Sucessfully created data document",
 )
-async def post_data_root_v2(data: dict = None) -> dict:
+async def post_data_root_v2(
+    data: dict = {"user101": {"first_name": "John", "last_name": "Wick"}}
+) -> dict:
     _check_empty_payload(data)
 
     # Create a new ID for data to insert
@@ -49,32 +51,29 @@ async def post_data_root_v2(data: dict = None) -> dict:
     response_description="Sucessfully created data document",
 )
 async def put_data_root_v2(
-    data: dict = None,
+    data: dict = {
+        "dummy": {"type": "string", "value": "arbitary"},
+        "examples": {"type": "string", "value": "arbitary"},
+    }
 ) -> dict:
     _check_empty_payload(data)
     og_data = data
     valid = True
-    if type(data) == dict:
-        for key, val in data.items():
-            # Find and drop old collection with same names
-            collection = get_collection(key)
-            await collection.drop()
 
-            # Validate and prepare the documents
-            _check_data_type_for_root(val)
-            docs = [{"_fm_id": k, "_fm_val": v} for k, v in val.items()]
-            # Insert the documents
-            result = await collection.insert_many(docs, ordered=False)
+    for key, val in data.items():
+        # Find and drop old collection with same names
+        collection = get_collection(key)
+        await collection.drop()
 
-            # Validate the insertion
-            if len(result.inserted_ids) != len(docs):
-                valid = False
+        # Validate and prepare the documents
+        _check_data_type_for_root(val)
+        docs = [{"_fm_id": k, "_fm_val": v} for k, v in val.items()]
+        # Insert the documents
+        result = await collection.insert_many(docs, ordered=False)
 
-    if type(data) == list:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Pushing list on root level is not allowed",
-        )
+        # Validate the insertion
+        if len(result.inserted_ids) != len(docs):
+            valid = False
 
     if not valid:
         raise HTTPException(
@@ -90,7 +89,9 @@ async def put_data_root_v2(
     response_description="Sucessfully deleted data",
 )
 async def delete_data_root_v2() -> None:
-    await base_collection.drop()
+    collections = await db.list_collection_names()
+    for col in collections:
+        await get_collection(col).drop()
     return None
 
 
