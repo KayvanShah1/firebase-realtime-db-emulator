@@ -104,14 +104,9 @@ async def delete_data_root_v2() -> None:
 async def post_data_v2(path: str, data: str | list | dict | bool = None) -> dict:
     _check_empty_payload(data)
 
-    # collection = get_collection(path_components[0])
-    collection = base_collection
-
-    # Create a new ID for data to insert
-    id = uuid.uuid4().hex
-    data = {id: data}
-
+    # Recreate MongoDB style key
     path_components = path.strip("/").split("/")
+    collection = get_collection(path_components[0])
 
     # Recreate MongoDB style key
     nested_key = ".".join(path_components)
@@ -167,24 +162,78 @@ async def post_data_v2(path: str, data: str | list | dict | bool = None) -> dict
     response_description="Sucessfully created data document",
 )
 async def put_data_v2(
-    path: str, data: int | float | str | list | dict | bool = None
+    path: str, data: dict | int | float | str | list | bool = None
 ) -> int | float | str | list | dict | bool:
     _check_empty_payload(data)
+    valid = True
     og_data = data
 
     # Recreate MongoDB style key
     path_components = path.strip("/").split("/")
-
     # Collection name
     collection = get_collection(path_components[0])
 
-    if len(path_components) >= 1:
-        nested_key = ".".join(path_components[1:])
-        parent_key = ".".join(path_components[1:-1])
+    # Overwrite existing data at a key path
+    if len(path_components) > 1:
+        _fm_id = path_components[1]
+        nested_key = ".".join(path_components[2:])
+        parent_key = ".".join(path_components[2:-1])
 
         if len(parent_key) == 0:
             parent_key = nested_key
+        nested_key = f"_fm_val.{nested_key}"
+        parent_key = f"_fm_val.{parent_key}"
 
+        if await _if_structure_exists(collection, parent_key):
+            existing_data = await collection.find_one({parent_key: {"$exists": True}})
+            _id = existing_data["_id"]
+
+            # Update existing sub-document
+            new_data = await collection.update_one(
+                {"_id": _id, "_fm_id": _fm_id},
+                {"$set": {nested_key: data}},
+                upsert=True,
+            )
+            # Validate the upserted data
+            if (
+                new_data.modified_count > 0
+                or new_data.matched_count > 0
+                or new_data.upserted_id
+            ):
+                valid = True
+        else:
+            # Traverse over the path components
+            for key in path_components[2:-1:-1]:
+                data = {key: data}
+            # Push Data
+            new_data = await collection.insert_one({"_fm_id": _fm_id, "_fm_val": data})
+            # Validation
+            valid = await collection.find_one({"_id": new_data.inserted_id})
+
+    # Pushing data at a collection level
+    else:
+        await collection.drop()
+        if type(data) is list:
+            docs = [{"_fm_id": k, "_fm_val": v} for k, v in enumerate(data)]
+        elif type(data) is dict:
+            docs = [{"_fm_id": k, "_fm_val": v} for k, v in data.items()]
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Only documents with data type 'dict' and 'list' are allowed",
+            )
+        # Insert the documents
+        result = await collection.insert_many(docs, ordered=False)
+
+        # Validate the insertion
+        if len(result.inserted_ids) != len(docs):
+            valid = False
+
+    if not valid:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
     return og_data
 
 
