@@ -27,6 +27,7 @@ async def post_data_root_v2(
     # Create a new ID for data to insert
     id = uuid.uuid4().hex
     collection = get_collection(id)
+    await collection.create_index("_fm_id", unique=True, name="_fm_id_")
 
     valid = True
     # Create and Insert the documents
@@ -64,6 +65,7 @@ async def put_data_root_v2(
         # Find and drop old collection with same names
         collection = get_collection(key)
         await collection.drop()
+        await collection.create_index("_fm_id", unique=True, name="_fm_id_")
 
         # Validate and prepare the documents
         _check_data_type_for_root(val)
@@ -175,17 +177,22 @@ async def put_data_v2(
 
     # Overwrite existing data at a key path
     if len(path_components) > 1:
-        _fm_id = path_components[1]
-        nested_key = ".".join(path_components[2:])
-        parent_key = ".".join(path_components[2:-1])
+        _fm_id = eval(path_components[1])
+        parent_components = path_components[2:-1]
+        child_components = path_components[2:]
 
-        if len(parent_key) == 0:
+        nested_key = ".".join(child_components)
+        parent_key = ".".join(parent_components)
+
+        if len(parent_components) != 0:
             parent_key = nested_key
-        nested_key = f"_fm_val.{nested_key}"
-        parent_key = f"_fm_val.{parent_key}"
+        nested_key = f"_fm_val.{nested_key}".strip(".")
+        parent_key = f"_fm_val.{parent_key}".strip(".")
 
-        if await _if_structure_exists(collection, parent_key):
-            existing_data = await collection.find_one({parent_key: {"$exists": True}})
+        existing_data = await collection.find_one(
+            {"_fm_id": _fm_id, parent_key: {"$exists": True}}
+        )
+        if existing_data is not None:
             _id = existing_data["_id"]
 
             # Update existing sub-document
@@ -213,6 +220,7 @@ async def put_data_v2(
     # Pushing data at a collection level
     else:
         await collection.drop()
+        await collection.create_index("_fm_id", unique=True, name="_fm_id_")
         if type(data) is list:
             docs = [{"_fm_id": k, "_fm_val": v} for k, v in enumerate(data)]
         elif type(data) is dict:
