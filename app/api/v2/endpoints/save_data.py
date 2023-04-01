@@ -177,7 +177,9 @@ async def put_data_v2(
 
     # Overwrite existing data at a key path
     if len(path_components) > 1:
-        _fm_id = eval(path_components[1])
+        _fm_id = path_components[1]
+        if _fm_id.isdigit():
+            _fm_id = int(_fm_id)
         parent_components = path_components[2:-1]
         child_components = path_components[2:]
 
@@ -210,7 +212,7 @@ async def put_data_v2(
                 valid = True
         else:
             # Traverse over the path components
-            for key in path_components[2:-1:-1]:
+            for key in path_components[:1:-1]:
                 data = {key: data}
             # Push Data
             new_data = await collection.insert_one({"_fm_id": _fm_id, "_fm_val": data})
@@ -314,12 +316,15 @@ async def update_data_v2(
     response_description="Sucessfully deleted",
 )
 async def delete_data_v2(path: str):
-    # collection = get_collection(path_components[0])
-    collection = base_collection
-
     path_components = path.strip("/").split("/")
+    collection = get_collection(path_components[0])
 
     # Recreate MongoDB style key
+    if len(path_components) > 1:
+        _fm_id = eval(path_components[1])
+        parent_components = path_components[2:-1]
+        child_components = path_components[2:]
+
     nested_key = ".".join(path_components)
     if await _if_structure_exists(collection, nested_key):
         # Find the existing document id
