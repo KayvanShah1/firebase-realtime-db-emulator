@@ -217,7 +217,7 @@ async def put_data_v2(
             # Push Data
             new_data = await collection.insert_one({"_fm_id": _fm_id, "_fm_val": data})
             # Validation
-            valid = await collection.find_one({"_id": new_data.inserted_id})
+            valid = await collection.find_one({"_id": new_data.inserted_id}, {"_id": 0})
 
     # Pushing data at a collection level
     else:
@@ -252,55 +252,72 @@ async def put_data_v2(
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully updated data",
 )
-async def update_data_v2(
-    path: str, data: str | list | dict | bool = None
-) -> str | list | dict | bool:
-    collection = base_collection
+async def update_data_v2(path: str, data: dict = {"key": "value"}) -> dict:
+    valid = True
+    # Create a copy of data
     og_data = data
 
-    # Recreate MongoDB style key
     path_components = path.strip("/").split("/")
-    nested_key = ".".join(path_components)
-    parent_key = ".".join(path_components[:-1])
-    if len(parent_key) == 0:
-        parent_key = nested_key
+    collection = get_collection(path_components[0])
 
-    if await _if_structure_exists(collection, parent_key):
-        existing_data = await collection.find_one({parent_key: {"$exists": True}})
-        _id = existing_data["_id"]
+    # Updating data at a key path
+    if len(path_components) > 1:
+        # Recreate MongoDB style key
+        _fm_id = path_components[1]
+        if _fm_id.isdigit():
+            _fm_id = int(_fm_id)
+        parent_components = path_components[2:-1]
+        child_components = path_components[2:]
 
-        # Check if data key has path component
-        if type(data) is dict:
-            _is_path_componment_data = [
-                True if "/" in k else False for k in data.keys()
-            ]
-            if True in _is_path_componment_data:
-                setter = {
-                    f"{nested_key}.{k.replace('/', '.')}": v for k, v in data.items()
-                }
-            else:
-                setter = {nested_key: data}
-        else:
-            setter = {nested_key: data}
-        # Update existing sub-document
-        new_data = await collection.update_one(
-            {"_id": _id}, {"$set": setter}, upsert=True
+        nested_key = ".".join(child_components)
+        parent_key = ".".join(parent_components)
+
+        if len(parent_components) != 0:
+            parent_key = nested_key
+        nested_key = f"_fm_val.{nested_key}".strip(".")
+        parent_key = f"_fm_val.{parent_key}".strip(".")
+
+        existing_data = await collection.find_one(
+            {"_fm_id": _fm_id, parent_key: {"$exists": True}}
         )
-        # Validate the upserted data
-        if (
-            new_data.modified_count > 0
-            or new_data.matched_count > 0
-            or new_data.upserted_id
-        ):
-            valid = True
+        if existing_data is not None:
+            _id = existing_data["_id"]
+
+            setter = {f"{nested_key}.{k}": v for k, v in data.items()}
+            # Update or upsert the data
+            new_data = await collection.update_one(
+                {"_id": _id}, {"$set": setter}, upsert=True
+            )
+            # Validate the upserted data
+            if (
+                new_data.modified_count > 0
+                or new_data.matched_count > 0
+                or new_data.upserted_id
+            ):
+                valid = True
+
+        else:
+            # Traverse over the path components
+            for key in path_components[:1:-1]:
+                data = {key: data}
+            # Push Data
+            new_data = await collection.insert_one({"_fm_id": _fm_id, "_fm_val": data})
+            # Validation
+            valid = await collection.find_one({"_id": new_data.inserted_id}, {"_id": 0})
+
+    # Pushing data at a collection level
     else:
-        # Traverse over the path components
-        for key in path_components[::-1]:
-            data = {key: data}
-        # Push Data
-        new_data = await collection.insert_one(data)
-        # Validation
-        valid = await collection.find_one({"_id": new_data.inserted_id})
+        docs = [{"_fm_id": k, "_fm_val": v} for k, v in data.items()]
+        for doc in docs:
+            result = await collection.update_one(
+                {"_fm_id": doc["_fm_id"]},
+                {"$set": {"_fm_val": doc["_fm_val"]}},
+                upsert=True,
+            )
+
+        # Validate the insertion
+        # if len(result.inserted_ids) != len(docs):
+        #     valid = False
 
     if not valid:
         raise HTTPException(
