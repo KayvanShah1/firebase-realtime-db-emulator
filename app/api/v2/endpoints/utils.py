@@ -37,5 +37,7 @@ def _check_data_type_for_root(data) -> Exception:
     if type(data) is not dict:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Data type other than dict is not supported in MongoDB",
+            detail={
+                "error": "Invalid data; couldn't parse JSON object. Are you sending a JSON object with valid key names?"
+            },
         )
