@@ -316,49 +316,53 @@ async def update_data_v2(
     response_description="Sucessfully deleted",
 )
 async def delete_data_v2(path: str):
+    valid = False
     path_components = path.strip("/").split("/")
-    collection = get_collection(path_components[0])
 
-    # Recreate MongoDB style key
-    if len(path_components) > 1:
-        _fm_id = eval(path_components[1])
-        parent_components = path_components[2:-1]
-        child_components = path_components[2:]
+    # Check if collection exists
+    if path_components[0] in await db.list_collection_names():
+        collection = get_collection(path_components[0])
 
-    nested_key = ".".join(path_components)
-    if await _if_structure_exists(collection, nested_key):
-        # Find the existing document id
-        existing_data = await collection.find_one({nested_key: {"$exists": True}})
+        if len(path_components) > 1:
+            # Recreate MongoDB style key
+            _fm_id = path_components[1]
+            if _fm_id.isdigit():
+                _fm_id = int(_fm_id)
+            child_components = path_components[2:]
+            nested_key = ".".join(child_components)
+            nested_key = f"_fm_val.{nested_key}".strip(".")
 
-        # If retrieved document is not NULL
-        if existing_data is not None:
-            # Drop the field from document
-            _id = existing_data["_id"]
-            result = await collection.update_one(
-                {"_id": _id}, {"$unset": {nested_key: ""}}
+            existing_data = await collection.find_one(
+                {"_fm_id": _fm_id, nested_key: {"$exists": True}}
             )
-            # Validate the upserted data
-            if (
-                result.modified_count > 0
-                or result.matched_count > 0
-                or result.upserted_id
-            ):
-                valid = True
+            if existing_data is not None:
+                _id = existing_data["_id"]
+                result = await collection.update_one(
+                    {"_id": _id, "_fm_id": _fm_id}, {"$unset": {nested_key: ""}}
+                )
+                # Validate the upserted data
+                if (
+                    result.modified_count > 0
+                    or result.matched_count > 0
+                    or result.upserted_id
+                ):
+                    valid = True
 
-            # Confirm the modification
-            modified_doc = await collection.find_one({"_id": _id})
-            if modified_doc is not None:
-                # Delete the document if only "_id" is there
-                if len(modified_doc.keys()) == 1:
-                    await collection.delete_one({"_id": modified_doc["_id"]})
+                # Confirm the modification
+                modified_doc = await collection.find_one({"_id": _id, "_fm_id": _fm_id})
+                if modified_doc is not None:
+                    # Delete the document if only ["_id", "_fm_id"] is there
+                    if len(modified_doc.keys()) == 2:
+                        await collection.delete_one({"_id": modified_doc["_id"]})
+
+        # Dropping the collection at db level
+        else:
+            await collection.drop()
+            valid = True
 
         if not valid:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal Server Error",
             )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Key doesn't exist"
-        )
     return None
