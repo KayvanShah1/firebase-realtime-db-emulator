@@ -179,8 +179,8 @@ async def put_data_v2(
     # Overwrite existing data at a key path
     if len(path_components) > 1:
         _fm_id = path_components[1]
-        if _fm_id.isdigit():
-            _fm_id = int(_fm_id)
+        # if _fm_id.isdigit():
+        #     _fm_id = int(_fm_id)
         parent_components = path_components[2:-1]
         child_components = path_components[2:]
 
@@ -265,8 +265,8 @@ async def update_data_v2(path: str, data: dict = {"key": "value"}) -> dict:
     if len(path_components) > 1:
         # Recreate MongoDB style key
         _fm_id = path_components[1]
-        if _fm_id.isdigit():
-            _fm_id = int(_fm_id)
+        # if _fm_id.isdigit():
+        #     _fm_id = int(_fm_id)
         parent_components = path_components[2:-1]
         child_components = path_components[2:]
 
@@ -372,8 +372,8 @@ async def delete_data_v2(path: str):
         if len(path_components) > 1:
             # Recreate MongoDB style key
             _fm_id = path_components[1]
-            if _fm_id.isdigit():
-                _fm_id = int(_fm_id)
+            # if _fm_id.isdigit():
+            #     _fm_id = int(_fm_id)
             child_components = path_components[2:]
             nested_key = ".".join(child_components)
             nested_key = f"_fm_val.{nested_key}".strip(".")
