@@ -5,6 +5,7 @@ from app.api.v2.endpoints.utils import (
     _check_empty_payload,
     _check_data_type_for_root,
     _if_structure_exists,
+    unwrap_path_to_dict,
 )
 
 from app.db.database import get_collection, db, base_collection
@@ -283,7 +284,7 @@ async def update_data_v2(path: str, data: dict = {"key": "value"}) -> dict:
         if existing_data is not None:
             _id = existing_data["_id"]
 
-            setter = {f"{nested_key}.{k}": v for k, v in data.items()}
+            setter = {f"{nested_key}.{k.replace('/','.')}": v for k, v in data.items()}
             # Update or upsert the data
             new_data = await collection.update_one(
                 {"_id": _id}, {"$set": setter}, upsert=True
@@ -300,24 +301,52 @@ async def update_data_v2(path: str, data: dict = {"key": "value"}) -> dict:
             # Traverse over the path components
             for key in path_components[:1:-1]:
                 data = {key: data}
+
             # Push Data
+            data = unwrap_path_to_dict(data) if type(data) is dict else data
             new_data = await collection.insert_one({"_fm_id": _fm_id, "_fm_val": data})
             # Validation
             valid = await collection.find_one({"_id": new_data.inserted_id}, {"_id": 0})
 
     # Pushing data at a collection level
     else:
-        docs = [{"_fm_id": k, "_fm_val": v} for k, v in data.items()]
-        for doc in docs:
-            result = await collection.update_one(
-                {"_fm_id": doc["_fm_id"]},
-                {"$set": {"_fm_val": doc["_fm_val"]}},
-                upsert=True,
-            )
+        # Upserting existing data
+        _is_path_in_key = [True if "/" in k else False for k in data.keys()]
+        if True in _is_path_in_key:
+            for k, v in data.items():
+                key_components = k.strip("/").split("/")
+                _fm_id = key_components[0]
 
-        # Validate the insertion
-        # if len(result.inserted_ids) != len(docs):
-        #     valid = False
+                if len(key_components) > 1:
+                    nested_key = ".".join(key_components[1:])
+                    update_key = f"_fm_val.{nested_key}".strip(".")
+
+                    setter = {update_key: v}
+                else:
+                    if type(v) is dict:
+                        setter = {f"_fm_val.{k}": _v for k, _v in v.items()}
+                    else:
+                        setter = {"_fm_val": v}
+                # Update or upsert the data
+                await collection.update_one(
+                    {"_fm_id": _fm_id}, {"$set": setter}, upsert=True
+                )
+
+        # Upserting new or old data
+        else:
+            docs = [
+                {
+                    "_fm_id": k,
+                    "_fm_val": unwrap_path_to_dict(v) if type(v) is dict else v,
+                }
+                for k, v in data.items()
+            ]
+            for doc in docs:
+                await collection.update_one(
+                    {"_fm_id": doc["_fm_id"]},
+                    {"$set": {"_fm_val": doc["_fm_val"]}},
+                    upsert=True,
+                )
 
     if not valid:
         raise HTTPException(
