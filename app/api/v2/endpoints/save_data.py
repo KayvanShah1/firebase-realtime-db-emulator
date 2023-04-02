@@ -225,7 +225,7 @@ async def put_data_v2(
         await collection.drop()
         await collection.create_index("_fm_id", unique=True, name="_fm_id_")
         if type(data) is list:
-            docs = [{"_fm_id": k, "_fm_val": v} for k, v in enumerate(data)]
+            docs = [{"_fm_id": str(k), "_fm_val": v} for k, v in enumerate(data)]
         elif type(data) is dict:
             docs = [{"_fm_id": k, "_fm_val": v} for k, v in data.items()]
         else:
