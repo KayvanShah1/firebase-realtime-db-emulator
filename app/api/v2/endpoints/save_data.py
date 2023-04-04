@@ -104,52 +104,78 @@ async def delete_data_root_v2() -> None:
     response_model=PostDataResponse,
     response_description="Sucessfully created data document",
 )
-async def post_data_v2(path: str, data: str | list | dict | bool = None) -> dict:
-    _check_empty_payload(data)
-
+async def post_data_v2(
+    path: str, data: dict | str | list | int | float | bool = None
+) -> dict:
     # Recreate MongoDB style key
     path_components = path.strip("/").split("/")
     collection = get_collection(path_components[0])
 
-    # Recreate MongoDB style key
-    nested_key = ".".join(path_components)
-    parent_key = ".".join(path_components[:-1])
-    if len(parent_key) == 0:
-        parent_key = nested_key
-    if await _if_structure_exists(collection, parent_key):
-        existing_data = await collection.find_one({parent_key: {"$exists": True}})
-        _id = existing_data["_id"]
+    # Create a new ID for data to insert
+    random_id = uuid.uuid4().hex
 
-        # Traverse and update existing sub-document
-        for key in path_components[:-1]:
-            existing_data = existing_data[key]
-        if not path_components[-1] in existing_data.keys():
-            data = {path_components[-1]: data}
-            _update_key = parent_key
-        else:
-            existing_data = existing_data[path_components[-1]]
-            _update_key = nested_key
-        existing_data.update(data)
+    # Overwrite existing data at a key path
+    if len(path_components) > 1:
+        _fm_id = path_components[1]
+        parent_components = path_components[2:-1]
+        child_components = path_components[2:]
 
-        # Update existing sub-document
-        new_data = await collection.update_one(
-            {"_id": _id}, {"$set": {_update_key: existing_data}}, upsert=True
+        nested_key = ".".join(child_components)
+        parent_key = ".".join(parent_components)
+
+        if len(parent_components) != 0:
+            parent_key = nested_key
+        nested_key = f"_fm_val.{nested_key}".strip(".")
+        parent_key = f"_fm_val.{parent_key}".strip(".")
+
+        existing_data = await collection.find_one(
+            {"_fm_id": _fm_id, parent_key: {"$exists": True}}
         )
-        # Validate the upserted data
-        if (
-            new_data.modified_count > 0
-            or new_data.matched_count > 0
-            or new_data.upserted_id
-        ):
-            valid = True
+        if existing_data is not None:
+            _id = existing_data["_id"]
+
+            # Update existing sub-document
+            new_data = await collection.update_one(
+                {"_id": _id, "_fm_id": _fm_id},
+                {"$set": {f"{nested_key}.{random_id}": data}},
+                upsert=True,
+            )
+            # Validate the upserted data
+            if (
+                new_data.modified_count > 0
+                or new_data.matched_count > 0
+                or new_data.upserted_id
+            ):
+                valid = True
+        else:
+            # Traverse over the path components
+            for key in path_components[:1:-1]:
+                data = {key: data}
+            # Push Data
+            new_data = await collection.insert_one(
+                {"_fm_id": random_id, "_fm_val": data}
+            )
+            # Validation
+            valid = await collection.find_one({"_id": new_data.inserted_id}, {"_id": 0})
+
+    # Pushing data at a collection level
     else:
-        # Traverse over the path components
-        for key in path_components[::-1]:
-            data = {key: data}
-        # Push Data
-        new_data = await collection.insert_one(data)
-        # Validation
-        valid = await collection.find_one({"_id": new_data.inserted_id})
+        await collection.create_index("_fm_id", unique=True, name="_fm_id_")
+        if type(data) is list:
+            docs = [{"_fm_id": str(k), "_fm_val": v} for k, v in enumerate(data)]
+        elif type(data) is dict:
+            docs = [{"_fm_id": k, "_fm_val": v} for k, v in data.items()]
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Only documents with data type 'dict' and 'list' are allowed",
+            )
+        # Insert the documents
+        result = await collection.insert_many(docs, ordered=False)
+
+        # Validate the insertion
+        if len(result.inserted_ids) != len(docs):
+            valid = False
 
     if not valid:
         raise HTTPException(
