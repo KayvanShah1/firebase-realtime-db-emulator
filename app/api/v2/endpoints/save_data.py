@@ -1,10 +1,11 @@
 import uuid
+from typing import Any
+
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.v2.endpoints.utils import (
     _check_empty_payload,
     _check_data_type_for_root,
-    _if_structure_exists,
     unwrap_path_to_dict,
 )
 
@@ -104,15 +105,16 @@ async def delete_data_root_v2() -> None:
     response_model=PostDataResponse,
     response_description="Sucessfully created data document",
 )
-async def post_data_v2(
-    path: str, data: dict | str | list | int | float | bool = None
-) -> dict:
+async def post_data_v2(path: str, data: dict | Any = None) -> dict:
     # Recreate MongoDB style key
     path_components = path.strip("/").split("/")
     collection = get_collection(path_components[0])
 
     # Create a new ID for data to insert
     random_id = uuid.uuid4().hex
+
+    if data is None:
+        return {"name": random_id}
 
     # Overwrite existing data at a key path
     if len(path_components) > 1:
@@ -160,29 +162,21 @@ async def post_data_v2(
 
     # Pushing data at a collection level
     else:
-        await collection.create_index("_fm_id", unique=True, name="_fm_id_")
-        if type(data) is list:
-            docs = [{"_fm_id": str(k), "_fm_val": v} for k, v in enumerate(data)]
-        elif type(data) is dict:
-            docs = [{"_fm_id": k, "_fm_val": v} for k, v in data.items()]
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Only documents with data type 'dict' and 'list' are allowed",
-            )
-        # Insert the documents
-        result = await collection.insert_many(docs, ordered=False)
-
-        # Validate the insertion
-        if len(result.inserted_ids) != len(docs):
-            valid = False
+        try:
+            await collection.create_index("_fm_id", unique=True, name="_fm_id_")
+        except Exception as e:
+            pass
+        # Push Data
+        result = await collection.insert_one({"_fm_id": random_id, "_fm_val": data})
+        # Validation
+        valid = await collection.find_one({"_id": result.inserted_id}, {"_id": 0})
 
     if not valid:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal Server Error",
         )
-    return {"name": id}
+    return {"name": random_id}
 
 
 @router.put(
