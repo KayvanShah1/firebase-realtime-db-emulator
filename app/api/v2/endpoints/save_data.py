@@ -1,15 +1,15 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Path, status
+from pydantic import Field
 
 from app.api.v2.endpoints.utils import (
-    _check_empty_payload,
     _check_data_type_for_root,
+    _check_empty_payload,
     unwrap_path_to_dict,
 )
-
-from app.db.database import get_collection, db, base_collection
+from app.db.database import db, get_collection
 from app.schemas.data import PostDataResponse
 
 router = APIRouter()
@@ -273,7 +273,10 @@ async def put_data_v2(
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully updated data",
 )
-async def update_data_v2(path: str, data: dict = {"key": "value"}) -> dict:
+async def update_data_v2(
+    path: str = Path(description="Enter the path to update data"),
+    data: dict = {"key": "value"},
+) -> dict:
     valid = True
     # Create a copy of data
     og_data = data
@@ -380,8 +383,9 @@ async def update_data_v2(path: str, data: dict = {"key": "value"}) -> dict:
     "/{path:path}.json",
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully deleted",
+    description="Remove data from the specified Firebase database reference.",
 )
-async def delete_data_v2(path: str):
+async def delete_data_v2(path: str = Path(description="Enter the path to remove data")):
     valid = False
     path_components = path.strip("/").split("/")
 
