@@ -2,7 +2,6 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Path, status
-from pydantic import Field
 
 from app.api.v2.endpoints.utils import (
     _check_data_type_for_root,
