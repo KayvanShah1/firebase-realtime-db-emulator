@@ -3,8 +3,6 @@ from pymongo.collection import Collection
 from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
 
-from app.schemas.data import GetDataQueryModel
-
 
 def get_mongo_style_path(path):
     """Recreate MongoDB style key"""
