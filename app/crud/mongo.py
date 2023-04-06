@@ -1,9 +1,9 @@
 from typing import Optional
 from pymongo.collection import Collection
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
 
-from app.db.database import get_collection, base_collection
+from app.schemas.data import GetDataQueryModel
 
 
 def get_mongo_style_path(path):
