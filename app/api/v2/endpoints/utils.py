@@ -1,5 +1,8 @@
+from typing import List, Union
 from fastapi import HTTPException, status
 from collections.abc import MutableMapping
+
+from app.db.database import get_collection
 
 
 async def _if_structure_exists(collection, key: str) -> bool:
@@ -125,3 +128,54 @@ def unwrap_path_to_dict(data: dict) -> dict:
             current_dict = current_dict.setdefault(k, {})
         current_dict[keys[-1]] = value
     return nested_dict
+
+
+async def check_index(path: str = None):
+    """Retrieves the index expression for an existing index document for a given path in the __fm_rules__ collection.
+
+    Args:
+        path (str, optional): The path to retrieve the index for. Defaults to None.
+
+    Returns:
+        str | dict | list | None: The index expression if the index document exists for the given path, otherwise None.
+    """
+    index_collection = get_collection("__fm_rules__")
+
+    if path is None:
+        path = "__root__"
+
+    index_doc = await index_collection.find_one({"path": path})
+    if index_doc is not None:
+        return index_doc[".indexOn"]
+    return None
+
+
+def get_items_between_indexes(
+    items: List[str], startAt: Union[str, int], endAt: Union[str, int]
+) -> List[str]:
+    """
+    Get items between two indexes (inclusive).
+
+    Args:
+        items (List[Union[str, int]]): The list of items to search.
+        startAt (Union[str, int]): The item to start searching from.
+        endAt (Union[str, int]): The item to end searching at.
+
+    Returns:
+        List[Union[str, int]]: The list of items between the two indexes (inclusive).
+
+    Example:
+        >>> items = ["1", "2", "798", "yuyuy", 98, 0, 46, "nm"]
+        >>> get_items_between_indexes(items, "2", 98)
+        ['2', '798', 'yuyuy', 98]
+    """
+    start_index = next((i for i, item in enumerate(items) if item == startAt), None)
+    end_index = next((i for i, item in enumerate(items) if item == endAt), None)
+
+    if start_index is None or end_index is None:
+        return []
+
+    if start_index > end_index:
+        start_index, end_index = end_index, start_index
+
+    return items[start_index : end_index + 1]
