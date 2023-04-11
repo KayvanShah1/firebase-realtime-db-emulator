@@ -49,4 +49,39 @@ When any value is pushed at DATABASE level __root__ all other collection will be
 --------------------------------------------------------------------
 Fetching data at __root__ level
 --------------------------------------------------------------------
-if document with __root__ attrs or id is found it has to be parsed differently 
+if document with __root__ attrs or id is found it has to be parsed differently
+
+
+#########################################################################################################
+INDEX and RULES Collection
+#########################################################################################################
+
+Special Collection Name: __fm_rules__
+
+-------------------------------------------------------------------------------------
+order by child
+-------------------------------------------------------------------------------------
+
+curl 'https://dinosaur-facts.firebaseio.com/dinosaurs.json?orderBy="height"&startAt=3&print=pretty'
+
+{
+  "rules": {
+    "dinosaurs": {
+      ".indexOn": ["height", "length"]
+    }
+  }
+}
+
+-------------------------------------------------------------------------------------
+order by value
+-------------------------------------------------------------------------------------
+
+curl 'https://dinosaur-facts.firebaseio.com/scores.json?orderBy="$value"&startAt=50&print=pretty'
+
+{
+  "rules": {
+    "scores": {
+      ".indexOn": ".value"
+    }
+  }
+}
