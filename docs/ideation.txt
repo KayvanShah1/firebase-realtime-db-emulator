@@ -1,3 +1,7 @@
+#########################################################################################################
+COLLECTION LEVEL OPERATIONS
+#########################################################################################################
+
 /collection/a/b/c
 collection = collection
 _fm_id = a 
@@ -14,3 +18,35 @@ nested_key = _fm_val
 collection = collection
 _fm_id = data.keys()
 _fm_val = data.values()
+
+#########################################################################################################
+ROOT LEVEL OPERATIONS
+#########################################################################################################
+
+----------------------------------------------------------------
+Collection level ROOT
+----------------------------------------------------------------
+if string, int, float is pushed at a collection level, then MongoDB documents looks like this:
+
+{
+    _id: ObjectId(),
+    __fm_root__: <value>
+}
+
+When a proper JSON objects is pushed at a collection level the document with key __fm_root__ has 
+to be deleted 
+
+--------------------------------------------------------------------
+DATABASE level root
+--------------------------------------------------------------------
+
+__root__ collection
+- push, update, delete values from __root__
+
+When other collections are created the __root__ collection will be deleted
+When any value is pushed at DATABASE level __root__ all other collection will be dropped
+
+--------------------------------------------------------------------
+Fetching data at __root__ level
+--------------------------------------------------------------------
+if document with __root__ attrs or id is found it has to be parsed differently 
