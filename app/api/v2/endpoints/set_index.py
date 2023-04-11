@@ -28,7 +28,7 @@ async def set_index(
         # Update existing sub-document
         new_data = await index_collection.update_one(
             {"_id": _id, "path": path},
-            {"$set": {".indexOn": index_on}},
+            {"$set": {"indexOn": index_on}},
             upsert=True,
         )
         # Validate the upserted data
@@ -40,7 +40,7 @@ async def set_index(
             valid = True
     else:
         new_index = await index_collection.insert_one(
-            {"path": path, ".indexOn": index_on}
+            {"path": path, "indexOn": index_on}
         )
         valid = await index_collection.find_one(
             {"_id": new_index.inserted_id}, {"_id": 0}
@@ -52,7 +52,7 @@ async def set_index(
             detail="Internal Server Error",
         )
 
-    return {"path": path, ".indexOn": index_on}
+    return {"path": path, "indexOn": index_on}
 
 
 @router.delete(
