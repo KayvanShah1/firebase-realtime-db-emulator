@@ -22,8 +22,7 @@ async def query_data_root_v2(
     startAt: Annotated[int | str | None, Query()] = None,
     endAt: Annotated[int | str | None, Query()] = None,
 ) -> dict | None:
-    result = {}
-
+    # Parameter validation and checks for violations
     if (
         limitToFirst is not None
         or limitToLast is not None
@@ -44,6 +43,8 @@ async def query_data_root_v2(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"error": "limitToFirst and limitToLast cannot both be defined"},
             )
+
+    result = {}
 
     collections = await db.list_collection_names()
     # Filter out special collection names
@@ -122,6 +123,68 @@ async def query_data_v2(
     startAt: Annotated[int | str | None, Query()] = None,
     endAt: Annotated[int | str | None, Query()] = None,
 ):
-    collection = get_collection()
+    # Parameter validation and checks for violations
+    if (
+        limitToFirst is not None
+        or limitToLast is not None
+        or equalTo is not None
+        or startAt is not None
+        and endAt is not None
+    ):
+        if orderBy is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "orderBy must be defined when other query parameters are defined"
+                },
+            )
 
-    return ...
+        if limitToFirst is not None and limitToLast is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "limitToFirst and limitToLast cannot both be defined"},
+            )
+
+    # Recreate MongoDB style key
+    path_components = path.strip("/").split("/")
+    # Collection name
+    collection = get_collection(path_components[0])
+
+    # Fetching data within a document
+    if len(path_components) > 1:
+        _fm_id = path_components[1]
+        nested_components = path_components[2:]
+
+        key = ".".join(nested_components)
+        nested_key = f"_fm_val.{key}".strip(".")
+
+        existing_data = await collection.find_one(
+            {"_fm_id": _fm_id, nested_key: {"$exists": True}}
+        )
+        if existing_data is not None:
+            existing_data = existing_data["_fm_val"]
+            for k in nested_components:
+                if type(existing_data) is list:
+                    existing_data = existing_data[int(k)]
+                else:
+                    existing_data = existing_data[k]
+            return existing_data
+        else:
+            return None
+
+    # Fetching data from the entire collection
+    else:
+        # Query Builder
+        filter_ = {}
+        project = {"_id": 0}
+        sort_ = []
+
+        if orderBy == "$key":
+            ...
+
+        # Fetch & Parse Mongo Documents
+        docs = await collection.find(filter_, project).to_list(length=None)
+        result = {}
+        for doc in docs:
+            result[doc["_fm_id"]] = doc["_fm_val"]
+        return result
