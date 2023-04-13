@@ -80,3 +80,21 @@ async def delete_index(path: str = None) -> None:
         )
 
     return None
+
+
+@router.get(
+    "/get-rules",
+    status_code=status.HTTP_200_OK,
+    response_description="Sucessfully fetched Index Rules",
+)
+async def get_rules() -> None:
+    rules = {}
+    index_collection = get_collection("__fm_rules__")
+
+    index_docs = await index_collection.find({}, {"_id": 0}).to_list(length=None)
+    for index in index_docs:
+        if index["path"] == "__root__":
+            rules["indexOn"] = index["indexOn"]
+        else:
+            rules[index["path"]] = index["indexOn"]
+    return rules
