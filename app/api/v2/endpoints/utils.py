@@ -169,8 +169,16 @@ def get_items_between_indexes(
         >>> get_items_between_indexes(items, "2", 98)
         ['2', '798', 'yuyuy', 98]
     """
-    start_index = next((i for i, item in enumerate(items) if item == startAt), None)
-    end_index = next((i for i, item in enumerate(items) if item == endAt), None)
+    if type(startAt) is int and type(endAt) is int:
+        start_index = next((i for i, item in enumerate(items) if item == startAt), None)
+        end_index = next((i for i, item in enumerate(items) if item == endAt), None)
+    else:
+        start_index = next(
+            (i for i, item in enumerate(items) if str(item).startswith(startAt)), None
+        )
+        end_index = next(
+            (i for i, item in enumerate(items) if str(item).startswith(endAt)), None
+        )
 
     if start_index is None or end_index is None:
         return []

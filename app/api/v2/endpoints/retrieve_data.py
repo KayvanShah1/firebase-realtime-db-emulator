@@ -78,7 +78,7 @@ async def query_data_root_v2(
                     result[col].update({doc["_fm_id"]: doc["_fm_val"]})
 
     elif orderBy == "$value":
-        index_ = await check_index()
+        index_ = await check_index("__root__")
         if index_ is None:
             raise HTTPException(
                 status_code=status.HTTP_200_OK,
@@ -86,6 +86,9 @@ async def query_data_root_v2(
                     "error": 'Index not defined, add ".indexOn": ".value", for path "/", to the rules'
                 },
             )
+        # if index_ == ".value" or ".value" in index_:
+        #     {k: v for k, v in sorted(x.items(), key=lambda item: item[1])}
+
     # Filtering by a specified child key
     elif type(orderBy) is str:
         index_ = await check_index()
@@ -180,10 +183,16 @@ async def query_data_v2(
         sort_ = []
 
         if orderBy == "$key":
+            sort_.append(("_fm_id", 1))
+        elif orderBy == "$value":
             ...
+        elif type(orderBy) is str:
+            ...
+        else:
+            sort_.append(("_fm_id", 1))
 
         # Fetch & Parse Mongo Documents
-        docs = await collection.find(filter_, project).to_list(length=None)
+        docs = await collection.find(filter_, project).sort(sort_).to_list(length=None)
         result = {}
         for doc in docs:
             result[doc["_fm_id"]] = doc["_fm_val"]
