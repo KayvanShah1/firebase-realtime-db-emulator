@@ -2,7 +2,11 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, HTTPException, Path, Query, status
 from fastapi.encoders import jsonable_encoder
-from app.api.v2.endpoints.utils import check_index, get_items_between_indexes
+from app.api.v2.endpoints.utils import (
+    check_index,
+    get_items_between_indexes,
+    get_items_between_range,
+)
 
 from app.db.database import db, get_collection
 
@@ -44,6 +48,7 @@ async def query_data_root_v2(
                 detail={"error": "limitToFirst and limitToLast cannot both be defined"},
             )
 
+    # Set default result to empty dictionary
     result = {}
 
     collections = await db.list_collection_names()
@@ -61,12 +66,20 @@ async def query_data_root_v2(
     if orderBy == "$key":
         # StartAt & EndAt filters
         if startAt or endAt:
-            collections = get_items_between_indexes(collections, startAt, endAt)
+            if not isinstance(startAt, (str, type(None))) or not isinstance(
+                endAt, (str, type(None))
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_200_OK,
+                    detail={
+                        "error": "Provided key index type is invalid, must be string"
+                    },
+                )
+            collections = get_items_between_range(collections, startAt, endAt)
 
         if equalTo:
             if len(collections) > 0:
-                if equalTo in collections:
-                    collections = [equalTo]
+                collections = [equalTo] if equalTo in collections else []
 
         if len(collections) > 0:
             for col in collections:
@@ -78,21 +91,37 @@ async def query_data_root_v2(
                     result[col].update({doc["_fm_id"]: doc["_fm_val"]})
 
     elif orderBy == "$value":
-        index_ = await check_index("__root__")
-        if index_ is None:
+        index_ = await check_index()
+        if index_ is None or ".value" not in index_:
             raise HTTPException(
                 status_code=status.HTTP_200_OK,
                 detail={
                     "error": 'Index not defined, add ".indexOn": ".value", for path "/", to the rules'
                 },
             )
-        # if index_ == ".value" or ".value" in index_:
-        #     {k: v for k, v in sorted(x.items(), key=lambda item: item[1])}
+
+        for col in collections:
+            collection = get_collection(col)
+            docs = await collection.find({}, {"_id": 0}).to_list(length=None)
+
+            if equalTo:
+                if docs == equalTo:
+                    result[col] = {}
+                    for doc in docs:
+                        result[col].update({doc["_fm_id"]: doc["_fm_val"]})
+            else:
+                result[col] = {}
+                for doc in docs:
+                    result[col].update({doc["_fm_id"]: doc["_fm_val"]})
+
+        result = {
+            k: v for k, v in sorted(result.items(), key=lambda item: str(item[1]))
+        }
 
     # Filtering by a specified child key
     elif type(orderBy) is str:
         index_ = await check_index()
-        if not index_:
+        if not index_ or orderBy not in index_:
             raise HTTPException(
                 status_code=status.HTTP_200_OK,
                 detail={
@@ -183,6 +212,17 @@ async def query_data_v2(
         sort_ = []
 
         if orderBy == "$key":
+            # StartAt & EndAt filters
+            if startAt or endAt:
+                if not isinstance(startAt, (str, type(None))) or not isinstance(
+                    endAt, (str, type(None))
+                ):
+                    raise HTTPException(
+                        status_code=status.HTTP_200_OK,
+                        detail={
+                            "error": "Provided key index type is invalid, must be string"
+                        },
+                    )
             sort_.append(("_fm_id", 1))
         elif orderBy == "$value":
             ...
