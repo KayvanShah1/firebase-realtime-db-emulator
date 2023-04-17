@@ -207,8 +207,8 @@ def get_items_between_range(
         startAt = startAt if startAt is not None else "a"
         endAt = endAt if endAt is not None else "z"
 
-        startAt = startAt.lower()[1:] if len(startAt) > 1 else startAt.lower()
-        endAt = endAt.lower()[1:] if len(endAt) > 1 else endAt.lower()
+        startAt = startAt.lower()[0] if len(startAt) > 1 else startAt.lower()
+        endAt = endAt.lower()[0] if len(endAt) > 1 else endAt.lower()
 
         pattern = re.compile(f"^[{startAt}-{endAt}]" + "{1}", re.IGNORECASE)
         items = (item for i, item in enumerate(items) if pattern.search(item))

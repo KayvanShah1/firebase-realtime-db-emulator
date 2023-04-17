@@ -65,6 +65,10 @@ async def query_data_root_v2(
     # Sorting and ordering of JSON documents
     if orderBy == "$key":
         # StartAt & EndAt filters
+        startAt, endAt = (
+            str(startAt) if startAt is not None else startAt,
+            str(endAt) if endAt is not None else endAt,
+        )
         if startAt or endAt:
             if not isinstance(startAt, (str, type(None))) or not isinstance(
                 endAt, (str, type(None))
@@ -211,8 +215,14 @@ async def query_data_v2(
         project = {"_id": 0}
         sort_ = []
 
+        sort_order = -1 if limitToLast else 1
+
         if orderBy == "$key":
             # StartAt & EndAt filters
+            startAt, endAt = (
+                str(startAt) if startAt is not None else startAt,
+                str(endAt) if endAt is not None else endAt,
+            )
             if startAt or endAt:
                 if not isinstance(startAt, (str, type(None))) or not isinstance(
                     endAt, (str, type(None))
@@ -223,16 +233,34 @@ async def query_data_v2(
                             "error": "Provided key index type is invalid, must be string"
                         },
                     )
-            sort_.append(("_fm_id", 1))
-        elif orderBy == "$value":
-            ...
-        elif type(orderBy) is str:
-            ...
-        else:
-            sort_.append(("_fm_id", 1))
+                startAt = startAt if startAt is not None else "a"
+                endAt = endAt if endAt is not None else "z"
 
-        # Fetch & Parse Mongo Documents
-        docs = await collection.find(filter_, project).sort(sort_).to_list(length=None)
+                startAt = startAt.lower()[0] if len(startAt) > 1 else startAt.lower()
+                endAt = endAt.lower()[0] if len(endAt) > 1 else endAt.lower()
+
+                pattern = f"^(?i)[{startAt}-{endAt}]" + "{1}"
+                filter_.update({"_fm_id": {"$regex": pattern}})
+
+            if equalTo:
+                filter_.update({"_fm_id": str(equalTo)})
+
+            sort_.append(("_fm_id", sort_order))
+        elif orderBy == "$value":
+            sort_.append(("_fm_val", sort_order))
+        elif type(orderBy) is str:
+            orderBy = orderBy.rstrip("/").replace("/", ".")
+            sort_.append((f"_fm_val.{orderBy}", sort_order))
+        else:
+            sort_.append(("_fm_id", sort_order))
+
+        # Fetch Data
+        docs = collection.find(filter_, project).sort(sort_)
+        if limitToFirst or limitToLast:
+            docs = docs.limit(limitToFirst or limitToLast)
+
+        # Parse Mongo Documents
+        docs = await docs.to_list(length=None)
         result = {}
         for doc in docs:
             result[doc["_fm_id"]] = doc["_fm_val"]
