@@ -204,10 +204,8 @@ def get_items_between_range(
         List[Union[str, int]]: The list of items between the two indexes (inclusive).
     """
     if isinstance(startAt, (str, type(None))) and isinstance(endAt, (str, type(None))):
-        if startAt is None:
-            startAt = "a"
-        if endAt is None:
-            endAt = "z"
+        startAt = startAt if startAt is not None else "a"
+        endAt = endAt if endAt is not None else "z"
 
         startAt = startAt.lower()[1:] if len(startAt) > 1 else startAt.lower()
         endAt = endAt.lower()[1:] if len(endAt) > 1 else endAt.lower()
