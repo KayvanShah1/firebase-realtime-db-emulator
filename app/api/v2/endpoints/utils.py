@@ -1,3 +1,5 @@
+import re
+
 from typing import List, Union
 from fastapi import HTTPException, status
 from collections.abc import MutableMapping
@@ -146,7 +148,7 @@ async def check_index(path: str = None):
 
     index_doc = await index_collection.find_one({"path": path})
     if index_doc is not None:
-        return index_doc[".indexOn"]
+        return index_doc["indexOn"]
     return None
 
 
@@ -169,16 +171,12 @@ def get_items_between_indexes(
         >>> get_items_between_indexes(items, "2", 98)
         ['2', '798', 'yuyuy', 98]
     """
-    if type(startAt) is int and type(endAt) is int:
-        start_index = next((i for i, item in enumerate(items) if item == startAt), None)
-        end_index = next((i for i, item in enumerate(items) if item == endAt), None)
-    else:
-        start_index = next(
-            (i for i, item in enumerate(items) if str(item).startswith(startAt)), None
-        )
-        end_index = next(
-            (i for i, item in enumerate(items) if str(item).startswith(endAt)), None
-        )
+    start_index = next(
+        (i for i, item in enumerate(items) if str(item).startswith(startAt)), None
+    )
+    end_index = next(
+        (i for i, item in enumerate(items) if str(item).startswith(endAt)), None
+    )
 
     if start_index is None or end_index is None:
         return []
@@ -187,3 +185,48 @@ def get_items_between_indexes(
         start_index, end_index = end_index, start_index
 
     return items[start_index : end_index + 1]
+
+
+def get_items_between_range(
+    items: List[str], startAt: Union[str, int, None], endAt: Union[str, int, None]
+) -> List:
+    """Get items between two indexes (inclusive).
+
+    Args:
+        items (List[Union[str, int]]): The list of items to search.
+        startAt (Union[str, int]): The item to start searching from.
+        endAt (Union[str, int]): The item to end searching at.
+
+    Raises:
+        ValueError: Both range should be of same data type
+
+    Returns:
+        List[Union[str, int]]: The list of items between the two indexes (inclusive).
+    """
+    if isinstance(startAt, (str, type(None))) and isinstance(endAt, (str, type(None))):
+        if startAt is None:
+            startAt = "a"
+        if endAt is None:
+            endAt = "z"
+
+        startAt = startAt.lower()[1:] if len(startAt) > 1 else startAt.lower()
+        endAt = endAt.lower()[1:] if len(endAt) > 1 else endAt.lower()
+
+        pattern = re.compile(f"^[{startAt}-{endAt}]" + "{1}", re.IGNORECASE)
+        items = (item for i, item in enumerate(items) if pattern.search(item))
+
+    elif isinstance(startAt, (int, type(None))) and isinstance(
+        endAt, (int, type(None))
+    ):
+        items = (
+            item
+            for i, item in enumerate(items)
+            if isinstance(item, int)
+            and (startAt is None or item >= startAt)
+            and (endAt is None or item <= endAt)
+        )
+
+    else:
+        raise ValueError("startAt and endAt should have the same type")
+
+    return list(items)
