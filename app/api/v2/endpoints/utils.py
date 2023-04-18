@@ -1,6 +1,6 @@
 import re
 
-from typing import List, Union
+from typing import List, Union, Any
 from fastapi import HTTPException, status
 from collections.abc import MutableMapping
 
@@ -228,3 +228,37 @@ def get_items_between_range(
         raise ValueError("startAt and endAt should have the same type")
 
     return list(items)
+
+
+def order_by_key(items: List[str], startAt: Any = None, endAt: Any = None) -> List:
+    """
+    Sorts a list of strings lexicographically based on their keys.
+
+    Args:
+        items: A list of strings to be sorted.
+        startAt: Optional. A string specifying the lower bound for the sorted items. Only items with keys greater than
+            or equal to startAt are included in the result. Defaults to None.
+        endAt: Optional. A string specifying the upper bound for the sorted items. Only items with keys less than or
+            equal to endAt are included in the result. Defaults to None.
+
+    Returns:
+        A list of strings sorted lexicographically based on their keys and filtered based on startAt and endAt.
+    Raises:
+        ValueError: If startAt and endAt have different types.
+
+    The function sorts the list of strings based on their keys in lexicographically ascending order. If startAt is
+    specified, only items with keys greater than or equal to startAt are included in the result. If endAt is specified,
+    only items with keys less than or equal to endAt are included in the result. If startAt and endAt are both
+    specified, only items with keys between startAt and endAt are included. If startAt or endAt is not specified,
+    all items with keys greater than or equal to startAt and/or less than or equal to endAt are included.
+
+    """
+    if isinstance(startAt, (str, type(None))) and isinstance(endAt, (str, type(None))):
+        if startAt is not None:
+            items = [item for item in items if item >= startAt]
+        if endAt is not None:
+            items = [item for item in items if item <= endAt]
+    else:
+        raise ValueError("startAt and endAt should have the same type")
+
+    return items
