@@ -259,6 +259,8 @@ async def query_data_v2(
 
         # Fetch Data
         docs = collection.find(filter_, project).sort(sort_)
+
+        # Update results Limit
         if limitToFirst or limitToLast:
             docs = docs.limit(limitToFirst or limitToLast)
 
