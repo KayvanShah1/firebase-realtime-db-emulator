@@ -4,8 +4,7 @@ from fastapi import APIRouter, HTTPException, Path, Query, status
 from fastapi.encoders import jsonable_encoder
 from app.api.v2.endpoints.utils import (
     check_index,
-    get_items_between_indexes,
-    get_items_between_range,
+    order_by_key,
 )
 
 from app.db.database import db, get_collection
@@ -79,7 +78,7 @@ async def query_data_root_v2(
                         "error": "Provided key index type is invalid, must be string"
                     },
                 )
-            collections = get_items_between_range(collections, startAt, endAt)
+            collections = order_by_key(collections, startAt, endAt)
 
         if equalTo:
             if len(collections) > 0:
@@ -217,6 +216,7 @@ async def query_data_v2(
 
         sort_order = -1 if limitToLast else 1
 
+        # Ordering by key
         if orderBy == "$key":
             # StartAt & EndAt filters
             startAt, endAt = (
@@ -233,21 +233,24 @@ async def query_data_v2(
                             "error": "Provided key index type is invalid, must be string"
                         },
                     )
-                startAt = startAt if startAt is not None else "a"
-                endAt = endAt if endAt is not None else "z"
 
-                startAt = startAt.lower()[0] if len(startAt) > 1 else startAt.lower()
-                endAt = endAt.lower()[0] if len(endAt) > 1 else endAt.lower()
-
-                pattern = f"^(?i)[{startAt}-{endAt}]" + "{1}"
-                filter_.update({"_fm_id": {"$regex": pattern}})
+                query = {}
+                if startAt is not None:
+                    query.update({"$gte": startAt})
+                if endAt is not None:
+                    query.update({"$lte": endAt})
+                filter_.update({"_fm_id": query})
 
             if equalTo:
                 filter_.update({"_fm_id": str(equalTo)})
 
             sort_.append(("_fm_id", sort_order))
+
+        # Ordering by Value
         elif orderBy == "$value":
             sort_.append(("_fm_val", sort_order))
+
+        # Ordering by child key
         elif type(orderBy) is str:
             orderBy = orderBy.rstrip("/").replace("/", ".")
             sort_.append((f"_fm_val.{orderBy}", sort_order))
