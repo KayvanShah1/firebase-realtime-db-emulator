@@ -1,6 +1,6 @@
 import re
 
-from typing import List, Union, Any
+from typing import Dict, List, Union, Any
 from fastapi import HTTPException, status
 from collections.abc import MutableMapping
 
@@ -253,12 +253,60 @@ def order_by_key(items: List[str], startAt: Any = None, endAt: Any = None) -> Li
     all items with keys greater than or equal to startAt and/or less than or equal to endAt are included.
 
     """
-    if isinstance(startAt, (str, type(None))) and isinstance(endAt, (str, type(None))):
-        if startAt is not None:
-            items = [item for item in items if item >= startAt]
-        if endAt is not None:
-            items = [item for item in items if item <= endAt]
-    else:
-        raise ValueError("startAt and endAt should have the same type")
+    if startAt is not None:
+        items = (item for item in items if item >= startAt)
+    if endAt is not None:
+        items = (item for item in items if item <= endAt)
 
-    return items
+    return list(items)
+
+
+def order_by_value(
+    dictionary: Dict[Any, Any], startAt: Any = None, endAt: Any = None
+) -> Dict[Any, Any]:
+    """Sorts a dictionary by the values, and returns a new dictionary with the same keys, but sorted by the values.
+
+    Args:
+        dictionary (Dict): A dictionary to be sorted.
+        startAt (Any): Optional. A string specifying the lower bound for the sorted items. Only items with keys greater
+            than or equal to startAt are included in the result. Defaults to None.
+        endAt (Any:): Optional. A string specifying the upper bound for the sorted items. Only items with keys less
+            than or equal to endAt are included in the result. Defaults to None.
+
+    Returns:
+        Dict: A new dictionary with the same keys as the input dictionary, but sorted by the values in ascending order.
+    """
+
+    def sort_key(item: Any) -> Any:
+        """Returns a tuple that can be used as the key for sorting items.
+
+        Args:
+            item (Any): A tuple containing a key-value pair from the input dictionary.
+
+        Returns:
+            Tuple: A tuple that can be used as the key for sorting items.
+        """
+        if item[1] is None:
+            return (0, None)
+        if isinstance(item[1], bool):
+            return (1, not item[1], item[0])
+        elif isinstance(item[1], (int, float)):
+            return (2, item[1], item[0])
+        elif isinstance(item[1], str):
+            return (3, item[1], item[0])
+        elif isinstance(item[1], list):
+            return (4, [sort_key((i, x)) for i, x in enumerate(item[1])], item[0])
+        elif isinstance(item[1], dict):
+            return (5, [sort_key((k, v)) for k, v in item[1].items()], item[0])
+        else:
+            return (6, item[0])
+
+    sorted_items = sorted(dictionary.items(), key=sort_key)
+    # Filter out items
+    if startAt is not None:
+        sorted_items = [(k, v) for k, v in sorted_items if str(v) >= str(startAt)]
+    if endAt is not None:
+        sorted_items = [(k, v) for k, v in sorted_items if str(v) <= str(endAt)]
+
+    sorted_items = {k: v for k, v in sorted_items}
+    return sorted_items
