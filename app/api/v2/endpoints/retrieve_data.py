@@ -1,13 +1,10 @@
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Path, Query, status
-from fastapi.encoders import jsonable_encoder
-from app.api.v2.endpoints.utils import (
-    check_index,
-    order_by_key,
-)
+from app.api.v2.endpoints.utils import check_index, order_by_key, order_by_value
 
 from app.db.database import db, get_collection
+from app.schemas.data import GetDataResponse
 
 router = APIRouter()
 
@@ -15,6 +12,7 @@ router = APIRouter()
 @router.get(
     "/.json",
     status_code=status.HTTP_200_OK,
+    response_model=GetDataResponse,
     response_description="Sucessfully fetched data",
 )
 async def query_data_root_v2(
@@ -64,10 +62,6 @@ async def query_data_root_v2(
     # Sorting and ordering of JSON documents
     if orderBy == "$key":
         # StartAt & EndAt filters
-        startAt, endAt = (
-            str(startAt) if startAt is not None else startAt,
-            str(endAt) if endAt is not None else endAt,
-        )
         if startAt or endAt:
             if not isinstance(startAt, (str, type(None))) or not isinstance(
                 endAt, (str, type(None))
@@ -117,9 +111,7 @@ async def query_data_root_v2(
                 for doc in docs:
                     result[col].update({doc["_fm_id"]: doc["_fm_val"]})
 
-        result = {
-            k: v for k, v in sorted(result.items(), key=lambda item: str(item[1]))
-        }
+        result = order_by_value(result, startAt, endAt)
 
     # Filtering by a specified child key
     elif type(orderBy) is str:
@@ -147,6 +139,7 @@ async def query_data_root_v2(
 @router.get(
     "/{path:path}.json",
     status_code=status.HTTP_200_OK,
+    response_model=GetDataResponse,
     response_description="Sucessfully fetched data",
 )
 async def query_data_v2(
@@ -219,10 +212,6 @@ async def query_data_v2(
         # Ordering by key
         if orderBy == "$key":
             # StartAt & EndAt filters
-            startAt, endAt = (
-                str(startAt) if startAt is not None else startAt,
-                str(endAt) if endAt is not None else endAt,
-            )
             if startAt or endAt:
                 if not isinstance(startAt, (str, type(None))) or not isinstance(
                     endAt, (str, type(None))
@@ -239,7 +228,8 @@ async def query_data_v2(
                     query.update({"$gte": startAt})
                 if endAt is not None:
                     query.update({"$lte": endAt})
-                filter_.update({"_fm_id": query})
+                if query:
+                    filter_.update({"_fm_id": query})
 
             if equalTo:
                 filter_.update({"_fm_id": str(equalTo)})
@@ -248,13 +238,56 @@ async def query_data_v2(
 
         # Ordering by Value
         elif orderBy == "$value":
+            index_ = await check_index(path)
+            if index_ is None or ".value" not in index_:
+                raise HTTPException(
+                    status_code=status.HTTP_200_OK,
+                    detail={
+                        "error": f'Index not defined, add ".indexOn": ".value", for path "{path}", to the rules'
+                    },
+                )
+
+            # Filters: startAt and endAt
+            query = {}
+            if startAt is not None:
+                query.update({"$gte": startAt})
+            if endAt is not None:
+                query.update({"$lte": endAt})
+            if query:
+                filter_.update({"_fm_val": query})
+
+            if equalTo:
+                filter_.update({"_fm_val": equalTo})
+
             sort_.append(("_fm_val", sort_order))
 
         # Ordering by child key
         elif type(orderBy) is str:
+            index_ = await check_index(path_components[0])
+            if index_ is None or orderBy not in index_:
+                raise HTTPException(
+                    status_code=status.HTTP_200_OK,
+                    detail={
+                        "error": f'Index not defined, add ".indexOn": ".value", for path "/{path}", to the rules'
+                    },
+                )
             orderBy = orderBy.rstrip("/").replace("/", ".")
+
+            # Filters: startAt and endAt
+            query = {}
+            if startAt is not None:
+                query.update({"$gte": startAt})
+            if endAt is not None:
+                query.update({"$lte": endAt})
+            if query:
+                filter_.update({f"_fm_val.{orderBy}": query})
+
+            if equalTo:
+                filter_.update({f"_fm_val.{orderBy}": equalTo})
+
             sort_.append((f"_fm_val.{orderBy}", sort_order))
-        else:
+
+        elif orderBy is None:
             sort_.append(("_fm_id", sort_order))
 
         # Fetch Data
