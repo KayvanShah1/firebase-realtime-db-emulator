@@ -77,15 +77,15 @@ async def query_data_root_v2(
     collections.sort()
 
     # Limit Querying and Filtering
-    if limitToFirst:
+    if limitToFirst is not None:
         collections = collections[:limitToFirst]
-    if limitToLast:
+    if limitToLast is not None:
         collections = collections[-limitToLast:]
 
     # Sorting and ordering of JSON documents
     if orderBy == "$key":
         # StartAt & EndAt filters
-        if startAt or endAt:
+        if startAt is not None or endAt is not None:
             if not isinstance(startAt, (str, type(None))) or not isinstance(
                 endAt, (str, type(None))
             ):
@@ -97,7 +97,7 @@ async def query_data_root_v2(
                 )
             collections = order_by_key(collections, startAt, endAt)
 
-        if equalTo:
+        if equalTo is not None:
             if len(collections) > 0:
                 collections = [equalTo] if equalTo in collections else []
 
@@ -124,7 +124,7 @@ async def query_data_root_v2(
             collection = get_collection(col)
             docs = await collection.find({}, {"_id": 0}).to_list(length=None)
 
-            if equalTo:
+            if equalTo is not None:
                 if docs == equalTo:
                     result[col] = {}
                     for doc in docs:
@@ -238,62 +238,130 @@ async def query_data_v2(
                 else:
                     existing_data = existing_data[k]
 
-            # # Order by Key
-            # if orderBy == "$key":
-            #     if type(existing_data) is list:
-            #         existing_data = order_by_key(existing_data, startAt, endAt)
+            # Order by Key
+            if orderBy == "$key":
+                if type(existing_data) is list:
+                    if startAt is not None:
+                        existing_data = existing_data[int(startAt) :]
+                    if endAt is not None:
+                        existing_data = existing_data[: int(endAt)]
 
-            #         # Limit Querying and Filtering
-            #         if limitToFirst:
-            #             existing_data = existing_data[:limitToFirst]
-            #         if limitToLast:
-            #             existing_data = existing_data[-limitToLast:]
+                    if equalTo is not None:
+                        existing_data = (
+                            existing_data[int(equalTo)]
+                            if int(equalTo) <= len(existing_data)
+                            else None
+                        )
 
-            #     if type(existing_data) is dict:
-            #         existing_data = sorted(
-            #             existing_data.items(), key=lambda item: str(item[0])
-            #         )
+                    # Limit Querying and Filtering
+                    if limitToFirst is not None:
+                        existing_data = existing_data[:limitToFirst]
+                    if limitToLast is not None:
+                        existing_data = existing_data[-limitToLast:]
 
-            #         # Limit Querying and Filtering
-            #         if limitToFirst:
-            #             existing_data = existing_data[:limitToFirst]
-            #         if limitToLast:
-            #             existing_data = existing_data[-limitToLast:]
+                elif type(existing_data) is dict:
+                    existing_data = sorted(
+                        existing_data.items(), key=lambda item: str(item[0])
+                    )
 
-            #         existing_data = {k: v for k, v in existing_data}
-            #     else:
-            #         if startAt or endAt or equalTo:
-            #             existing_data = {}
-            #         elif limitToFirst or limitToLast:
-            #             existing_data = None
-            #         else:
-            #             existing_data = existing_data
+                    if startAt is not None:
+                        existing_data = [
+                            (k, v) for k, v in existing_data if str(k) >= str(startAt)
+                        ]
+                    if endAt is not None:
+                        existing_data = [
+                            (k, v) for k, v in existing_data if str(k) <= str(endAt)
+                        ]
 
-            # # Ordering by Value
-            # elif orderBy == "$value":
-            #     index_ = await check_index(path_components[0])
-            #     if index_ is None or ".value" not in index_:
-            #         raise HTTPException(
-            #             status_code=status.HTTP_200_OK,
-            #             detail={
-            #                 "error": f'Index not defined, add ".indexOn": ".value", for path "/{path}", to the rules'
-            #             },
-            #         )
+                    if equalTo is not None:
+                        existing_data = (
+                            (k, v) for k, v in existing_data if str(k) == equalTo
+                        )
 
-            # # Ordering by child key
-            # elif type(orderBy) is str:
-            #     index_ = await check_index(path_components[0])
-            #     if index_ is None or orderBy not in index_:
-            #         raise HTTPException(
-            #             status_code=status.HTTP_200_OK,
-            #             detail={
-            #                 "error": f'Index not defined, add ".indexOn": "{orderBy}", for path "/{path}", to the
-            # rules'
-            #             },
-            #         )
+                    # Limit Querying and Filtering
+                    if limitToFirst is not None:
+                        existing_data = existing_data[:limitToFirst]
+                    if limitToLast is not None:
+                        existing_data = existing_data[-limitToLast:]
 
-            #     if type(existing_data) in (list, dict):
-            #         ...
+                    existing_data = {k: v for k, v in existing_data}
+
+                else:
+                    if startAt is not None or endAt is not None or equalTo is not None:
+                        existing_data = {}
+                    if limitToFirst is not None or limitToLast is not None:
+                        existing_data = None
+                    else:
+                        existing_data = existing_data
+
+            # Ordering by Value
+            elif orderBy == "$value":
+                index_ = await check_index(path_components[0])
+                if index_ is None or ".value" not in index_:
+                    raise HTTPException(
+                        status_code=status.HTTP_200_OK,
+                        detail={
+                            "error": f'Index not defined, add ".indexOn": ".value", for path "/{path}", to the rules'
+                        },
+                    )
+
+                if type(existing_data) is list:
+                    if startAt is not None:
+                        existing_data = [
+                            item for item in existing_data if str(item) >= str(startAt)
+                        ]
+                    if endAt is not None:
+                        existing_data = [
+                            item for item in existing_data if str(item) <= str(endAt)
+                        ]
+
+                    if equalTo is not None:
+                        existing_data = [
+                            item for item in existing_data if str(item) == str(equalTo)
+                        ]
+
+                    # Limit Querying and Filtering
+                    if limitToFirst is not None:
+                        existing_data = existing_data[:limitToFirst]
+                    if limitToLast is not None:
+                        existing_data = existing_data[-limitToLast:]
+
+                elif type(existing_data) is dict:
+                    existing_data = order_by_value(existing_data, startAt, endAt)
+                    existing_data = existing_data.items()
+
+                    if equalTo is not None:
+                        existing_data = (
+                            (k, v) for k, v in existing_data if str(k) == equalTo
+                        )
+
+                    # Limit Querying and Filtering
+                    if limitToFirst is not None:
+                        existing_data = existing_data[:limitToFirst]
+                    if limitToLast is not None:
+                        existing_data = existing_data[-limitToLast:]
+
+                    existing_data = {k: v for k, v in existing_data}
+
+                else:
+                    if startAt is not None or endAt is not None or equalTo is not None:
+                        existing_data = {}
+                    if limitToFirst is not None or limitToLast is not None:
+                        existing_data = None
+                    else:
+                        existing_data = existing_data
+
+            # Ordering by child key
+            elif type(orderBy) is str:
+                index_ = await check_index(path_components[0])
+                if index_ is None or orderBy not in index_:
+                    raise HTTPException(
+                        status_code=status.HTTP_200_OK,
+                        detail={
+                            "error": f'Index not defined, add ".indexOn": "{orderBy}", for path "/{path}", to the rules'
+                        },
+                    )
+                ...
 
             return existing_data
         else:
@@ -306,12 +374,12 @@ async def query_data_v2(
         project = {"_id": 0}
         sort_ = []
 
-        sort_order = -1 if limitToLast else 1
+        sort_order = -1 if limitToLast is not None else 1
 
         # Ordering by key
         if orderBy == "$key":
             # StartAt & EndAt filters
-            if startAt or endAt:
+            if startAt is not None or endAt is not None:
                 if not isinstance(startAt, (str, type(None))) or not isinstance(
                     endAt, (str, type(None))
                 ):
@@ -393,7 +461,7 @@ async def query_data_v2(
         docs = collection.find(filter_, project).sort(sort_)
 
         # Update results Limit
-        if limitToFirst or limitToLast:
+        if limitToFirst is not None or limitToLast is not None:
             docs = docs.limit(limitToFirst or limitToLast)
 
         # Parse Mongo Documents
