@@ -1,5 +1,8 @@
-from typing import Any
-from pydantic import BaseModel
+from typing import Any, Optional
+from pydantic import BaseModel, BaseConfig
+
+from pydantic.fields import ModelField
+from pydantic.typing import is_union, get_args, get_origin
 
 
 class PostDataResponse(BaseModel):
@@ -7,4 +10,4 @@ class PostDataResponse(BaseModel):
 
 
 class GetDataResponse(BaseModel):
-    __root__: Any
+    __root__: Optional[Any | None] = None
