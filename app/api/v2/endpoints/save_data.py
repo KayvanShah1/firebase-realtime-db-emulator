@@ -23,6 +23,21 @@ router = APIRouter()
 async def post_data_root_v2(
     data: dict = {"user101": {"first_name": "John", "last_name": "Wick"}}
 ) -> dict:
+    """
+    Create a new data document.
+
+    Parameters:
+
+        - `data`: a dictionary of data to be inserted.
+
+    Returns:
+
+        - A dictionary containing the unique ID of the created document.
+
+    Raises:
+
+        - `HTTPException`: if the payload is empty or there is an error creating the document.
+    """
     _check_empty_payload(data)
 
     # Create a new ID for data to insert
