@@ -23,6 +23,29 @@ async def query_data_root_v2(
     startAt: Annotated[int | str | None, Query()] = None,
     endAt: Annotated[int | str | None, Query()] = None,
 ) -> dict | None:
+    """This API endpoint fetches data from a MongoDB database based on various query parameters.
+
+    Parameters:
+        - orderBy (optional): A string indicating the key to use for sorting the results.
+        - limitToFirst (optional): An integer indicating the number of records to return from the beginning of the
+            collection.
+        - limitToLast (optional): An integer indicating the number of records to return from the end of the collection.
+        - equalTo (optional): A value used to filter the results. Only records with a matching value are returned.
+        - startAt (optional): A value used to filter the results. Only records with a key greater than or equal to
+            the specified value are returned.
+        - endAt (optional): A value used to filter the results. Only records with a key less than or equal to the
+            specified value are returned.
+
+    Returns:
+        - A dictionary containing the requested data. The keys are the names of the collections, and the values are
+        dictionaries containing the records in the collection.
+
+    Raises:
+        - HTTPException with status code 400: If orderBy is not defined when other query parameters are defined, or if
+            both limitToFirst and limitToLast are defined.
+        - HTTPException with status code 200: If the provided key index type is invalid.
+        - HTTPException with status code 200: If the index is not defined.
+    """
     # Parameter validation and checks for violations
     if (
         limitToFirst is not None
@@ -151,6 +174,24 @@ async def query_data_v2(
     startAt: Annotated[int | str | None, Query()] = None,
     endAt: Annotated[int | str | None, Query()] = None,
 ):
+    """Retrieve data from the specified path of the MongoDB collection.
+
+    Parameters:
+        - path (str): The path to retrieve data from.
+        - orderBy (str): The key to order the data by. Can be "$key" to order by the document key or a child
+            key to order by.
+        - limitToFirst (int): The maximum number of items to retrieve from the beginning of the ordered data.
+        - limitToLast (int): The maximum number of items to retrieve from the end of the ordered data.
+        - equalTo (str): The value that the ordered data must match.
+        - startAt (str): The key to start retrieving data from.
+        - endAt (str): The key to stop retrieving data from.
+
+    Returns:
+        - GetDataResponse: A dictionary containing the retrieved data.
+
+    Raises:
+        - HTTPException 400 Bad Request: If the query parameters violate validation rules.
+    """
     # Parameter validation and checks for violations
     if (
         limitToFirst is not None
@@ -196,6 +237,64 @@ async def query_data_v2(
                     existing_data = existing_data[int(k)]
                 else:
                     existing_data = existing_data[k]
+
+            # # Order by Key
+            # if orderBy == "$key":
+            #     if type(existing_data) is list:
+            #         existing_data = order_by_key(existing_data, startAt, endAt)
+
+            #         # Limit Querying and Filtering
+            #         if limitToFirst:
+            #             existing_data = existing_data[:limitToFirst]
+            #         if limitToLast:
+            #             existing_data = existing_data[-limitToLast:]
+
+            #     if type(existing_data) is dict:
+            #         existing_data = sorted(
+            #             existing_data.items(), key=lambda item: str(item[0])
+            #         )
+
+            #         # Limit Querying and Filtering
+            #         if limitToFirst:
+            #             existing_data = existing_data[:limitToFirst]
+            #         if limitToLast:
+            #             existing_data = existing_data[-limitToLast:]
+
+            #         existing_data = {k: v for k, v in existing_data}
+            #     else:
+            #         if startAt or endAt or equalTo:
+            #             existing_data = {}
+            #         elif limitToFirst or limitToLast:
+            #             existing_data = None
+            #         else:
+            #             existing_data = existing_data
+
+            # # Ordering by Value
+            # elif orderBy == "$value":
+            #     index_ = await check_index(path_components[0])
+            #     if index_ is None or ".value" not in index_:
+            #         raise HTTPException(
+            #             status_code=status.HTTP_200_OK,
+            #             detail={
+            #                 "error": f'Index not defined, add ".indexOn": ".value", for path "/{path}", to the rules'
+            #             },
+            #         )
+
+            # # Ordering by child key
+            # elif type(orderBy) is str:
+            #     index_ = await check_index(path_components[0])
+            #     if index_ is None or orderBy not in index_:
+            #         raise HTTPException(
+            #             status_code=status.HTTP_200_OK,
+            #             detail={
+            #                 "error": f'Index not defined, add ".indexOn": "{orderBy}", for path "/{path}", to the
+            # rules'
+            #             },
+            #         )
+
+            #     if type(existing_data) in (list, dict):
+            #         ...
+
             return existing_data
         else:
             return None
@@ -243,7 +342,7 @@ async def query_data_v2(
                 raise HTTPException(
                     status_code=status.HTTP_200_OK,
                     detail={
-                        "error": f'Index not defined, add ".indexOn": ".value", for path "{path}", to the rules'
+                        "error": f'Index not defined, add ".indexOn": ".value", for path "/{path}", to the rules'
                     },
                 )
 
@@ -268,19 +367,19 @@ async def query_data_v2(
                 raise HTTPException(
                     status_code=status.HTTP_200_OK,
                     detail={
-                        "error": f'Index not defined, add ".indexOn": ".value", for path "/{path}", to the rules'
+                        "error": f'Index not defined, add ".indexOn": "{orderBy}", for path "/{path}", to the rules'
                     },
                 )
             orderBy = orderBy.rstrip("/").replace("/", ".")
 
             # Filters: startAt and endAt
-            query = {}
+            query = {"$exists": True}
             if startAt is not None:
                 query.update({"$gte": startAt})
             if endAt is not None:
                 query.update({"$lte": endAt})
-            if query:
-                filter_.update({f"_fm_val.{orderBy}": query})
+
+            filter_.update({f"_fm_val.{orderBy}": query})
 
             if equalTo:
                 filter_.update({f"_fm_val.{orderBy}": equalTo})
