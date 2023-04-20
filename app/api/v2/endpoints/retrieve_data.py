@@ -12,7 +12,7 @@ router = APIRouter()
 @router.get(
     "/.json",
     status_code=status.HTTP_200_OK,
-    response_model=GetDataResponse,
+    # response_model=GetDataResponse,
     response_description="Sucessfully fetched data",
 )
 async def query_data_root_v2(
@@ -26,6 +26,7 @@ async def query_data_root_v2(
     """This API endpoint fetches data from a MongoDB database based on various query parameters.
 
     Parameters:
+
         - orderBy (optional): A string indicating the key to use for sorting the results.
         - limitToFirst (optional): An integer indicating the number of records to return from the beginning of the
             collection.
@@ -37,10 +38,12 @@ async def query_data_root_v2(
             specified value are returned.
 
     Returns:
+
         - A dictionary containing the requested data. The keys are the names of the collections, and the values are
         dictionaries containing the records in the collection.
 
     Raises:
+
         - HTTPException with status code 400: If orderBy is not defined when other query parameters are defined, or if
             both limitToFirst and limitToLast are defined.
         - HTTPException with status code 200: If the provided key index type is invalid.
@@ -162,7 +165,7 @@ async def query_data_root_v2(
 @router.get(
     "/{path:path}.json",
     status_code=status.HTTP_200_OK,
-    response_model=GetDataResponse,
+    # response_model=GetDataResponse,
     response_description="Sucessfully fetched data",
 )
 async def query_data_v2(
@@ -177,9 +180,9 @@ async def query_data_v2(
     """Retrieve data from the specified path of the MongoDB collection.
 
     Parameters:
+
         - path (str): The path to retrieve data from.
-        - orderBy (str): The key to order the data by. Can be "$key" to order by the document key or a child
-            key to order by.
+        - orderBy (str): The key to order the data by.
         - limitToFirst (int): The maximum number of items to retrieve from the beginning of the ordered data.
         - limitToLast (int): The maximum number of items to retrieve from the end of the ordered data.
         - equalTo (str): The value that the ordered data must match.
@@ -187,10 +190,15 @@ async def query_data_v2(
         - endAt (str): The key to stop retrieving data from.
 
     Returns:
+
         - GetDataResponse: A dictionary containing the retrieved data.
 
     Raises:
+
         - HTTPException 400 Bad Request: If the query parameters violate validation rules.
+        - HTTPException: If the orderBy parameter is not defined when other query parameters are defined.
+        - HTTPException: If both limitToFirst and limitToLast are defined.
+        - HTTPException: If the provided key index type is invalid and it's used to startAt or endAt filters.
     """
     # Parameter validation and checks for violations
     if (
@@ -296,7 +304,7 @@ async def query_data_v2(
 
             # Ordering by Value
             elif orderBy == "$value":
-                index_ = await check_index(path_components[0])
+                index_ = await check_index(path)
                 if index_ is None or ".value" not in index_:
                     raise HTTPException(
                         status_code=status.HTTP_200_OK,
@@ -353,7 +361,7 @@ async def query_data_v2(
 
             # Ordering by child key
             elif type(orderBy) is str:
-                index_ = await check_index(path_components[0])
+                index_ = await check_index(path)
                 if index_ is None or orderBy not in index_:
                     raise HTTPException(
                         status_code=status.HTTP_200_OK,
