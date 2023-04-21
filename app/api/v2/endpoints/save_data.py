@@ -439,6 +439,10 @@ async def delete_data_v2(path: str = Path(description="Enter the path to remove 
                     if len(modified_doc.keys()) == 2:
                         await collection.delete_one({"_id": modified_doc["_id"]})
 
+                # Drop collection if no documents exist after deletion
+                if await collection.count_documents({}) == 0:
+                    await collection.drop()
+
         # Dropping the collection at db level
         else:
             await collection.drop()
