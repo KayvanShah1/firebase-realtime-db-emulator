@@ -73,6 +73,25 @@ async def put_data_root_v2(
         "examples": {"type": "string", "value": "arbitary"},
     }
 ) -> dict:
+    """
+    Create or update documents in the root collection.
+
+    Args:
+
+        - data (dict): A dictionary containing the documents to create or update. Each
+            document should be represented as a key-value pair, where the key is the
+            document ID and the value is a dictionary containing the document's data.
+
+    Returns:
+
+        - dict: The original data submitted to the endpoint.
+
+    Raises:
+
+        - HTTPException: If the payload is empty or if there was an error during
+        insertion.
+    """
+
     _check_empty_payload(data)
     og_data = data
     valid = True
@@ -107,6 +126,17 @@ async def put_data_root_v2(
     response_description="Sucessfully deleted data",
 )
 async def delete_data_root_v2() -> None:
+    """
+    Deletes all collections in the database.
+
+    Returns:
+
+        - None: if all collections were deleted successfully.
+
+    Raises:
+
+        - None: this function does not raise any exceptions.
+    """
     collections = await db.list_collection_names()
     for col in collections:
         await get_collection(col).drop()
@@ -201,6 +231,28 @@ async def post_data_v2(path: str, data: dict | Any = None) -> dict:
 async def put_data_v2(
     path: str, data: dict | int | float | str | list | bool = None
 ) -> int | float | str | list | dict | bool:
+    """
+    Create or update a document at the given path in MongoDB collection.
+
+    Params:
+
+        - path: str
+        The path to the MongoDB collection or sub-document.
+
+        - data: dict | Any, optional (default=None)
+        The data to be added or updated. If not provided, a new document will be created
+        with a randomly generated id.
+
+    Returns:
+
+        - dict
+            A dictionary containing the name of the newly created or updated document.
+
+    Raises:
+
+        - HTTPException
+            If there is an internal server error during document creation or update.
+    """
     _check_empty_payload(data)
     valid = True
     og_data = data
@@ -291,6 +343,23 @@ async def update_data_v2(
     path: str = Path(description="Enter the path to update data"),
     data: dict = {"key": "value"},
 ) -> dict:
+    """Updates data in a collection or a specific document.
+
+    Params:
+
+        - path (str): The path to the document to be updated in the collection.
+            Defaults to None.
+        - data (dict): The data to be updated in the document. Defaults to
+            {"key": "value"}.
+
+    Returns:
+
+        - dict: The updated data.
+
+    Raises:
+
+        - HTTPException: If the update fails.
+    """
     valid = True
     # Create a copy of data
     og_data = data
@@ -397,9 +466,28 @@ async def update_data_v2(
     "/{path:path}.json",
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully deleted",
-    description="Remove data from the specified Firebase database reference.",
 )
 async def delete_data_v2(path: str = Path(description="Enter the path to remove data")):
+    """This is an API endpoint for deleting data from a specified Firebase database reference.
+    The endpoint is a HTTP DELETE request with a URL parameter 'path' which is the path to the
+    data that needs to be removed.
+
+    Parameters:
+
+        - path (str): the path to the data that needs to be removed. This is a required parameter.
+
+    Response:
+
+        - None: If the data is successfully deleted, the endpoint returns None.
+        - HTTP Response Status Code:
+            - 200 OK: The endpoint returns a 200 status code if the data is successfully deleted.
+
+    Exceptions:
+
+        - HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR): If an internal server
+        error occurs, the endpoint raises an HTTPException with a 500 status code and the detail
+        message "Internal Server Error".
+    """
     valid = False
     path_components = path.strip("/").split("/")
 
