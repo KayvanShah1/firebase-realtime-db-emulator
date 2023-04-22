@@ -3,9 +3,6 @@ FROM python:3.10.10-slim-buster
 WORKDIR /usr/src/app
 
 COPY requirements.txt ./
-COPY assets ./
-COPY templates ./
-
 
 # this is to help prevent installing requirements everytime we update our
 # source code, this is cause docker has a caching system.
