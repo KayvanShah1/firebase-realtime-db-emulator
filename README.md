@@ -1,5 +1,27 @@
 # Firebase Realtime Database Emulator
 
+This project is a REST API for storing and retrieving data documents. It allows
+users to create new data documents by sending a POST request to the API
+endpoint.
+
+The API supports the creation of multiple data documents at once, each
+identified by a unique ID. The created documents are stored in a MongoDB
+database.
+
+The API also supports retrieving data documents by their ID, using a GET request
+to the appropriate endpoint. The project uses Python and the FastAPI web
+framework, with asynchronous programming using the asyncio library. It also uses
+the PyMongo library for interfacing with MongoDB.
+
+The API includes error handling and input validation to ensure data integrity
+and prevent unexpected errors.
+
+> The theme of this semester’s project was emulation where the goal was to
+> develop a prototype system that emulates the interface and working of a big
+> data system.
+
+# Getting Started
+
 ## Setup of development environment
 
 1. Create a new Python environment and activate.
@@ -102,3 +124,10 @@ docker run --env_file .env --expose 8000
 okteto login
 okteto deploy --build
 ```
+
+# About
+
+Project Developed for `DSCI 551: Foundations of Data Management` | Spring 2023
+
+Developed By `Kayvan Shah` | `M.S. in Applied Data Science` |
+`University of Southern California`
