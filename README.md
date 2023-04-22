@@ -32,7 +32,29 @@
     pip install -r requirements-dev.txt
     ```
 
+## Setup Environment Variables for the App
+
+### Requirements
+
+-   You need have you own MongoDB Atlas Cluster
+-   Get the connection details including the URI, username and password
+
+### Creating a .env file
+
+-   You can the `example.env` file in the root directory
+-   Create a new environment file named `.env`
+-   Copy the contents of the file and paste it into the `.env` file created
+    above
+-   Add the MongoDB Atlas URI with username and password next to the
+    `MONGODB_URI` environment variable
+-   To generate a the secret key, run the following command:
+    ```bash
+    openssl rand -hex 32
+    ```
+
 ## Run the APP
+
+### Locally
 
 Run the command below in the terminal
 
