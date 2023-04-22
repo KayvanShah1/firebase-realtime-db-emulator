@@ -1,4 +1,4 @@
-# Firebase Realtime Database Emulator
+# FireMongo
 
 This project is a REST API for storing and retrieving data documents. It allows
 users to create new data documents by sending a POST request to the API
@@ -15,10 +15,6 @@ the PyMongo library for interfacing with MongoDB.
 
 The API includes error handling and input validation to ensure data integrity
 and prevent unexpected errors.
-
-> The theme of this semester’s project was emulation where the goal was to
-> develop a prototype system that emulates the interface and working of a big
-> data system.
 
 # Getting Started
 
@@ -127,7 +123,26 @@ okteto deploy --build
 
 # About
 
+The theme of this semester’s project was emulation where the goal was to develop
+a prototype system that emulates the interface and working of a big data system.
+
 Project Developed for `DSCI 551: Foundations of Data Management` | Spring 2023
 
 Developed By `Kayvan Shah` | `M.S. in Applied Data Science` |
 `University of Southern California`
+
+# References
+
+1. [Firebase. (n.d.). Use the Firebase Realtime Database REST API](https://firebase.google.com/docs/database/rest/start)
+
+2. [The MongoDB documentation](https://docs.mongodb.com/)
+
+3. [MongoDB Atlas. (2021). Cloud-hosted MongoDB](https://www.mongodb.com/cloud/atlas)
+
+4. [Okteto. (2021). Okteto Cloud Documentation. Okteto Cloud.](https://okteto.com/docs/home)
+
+5. [Sebastian Ramirez et al. FastAPI. 2020. [Online].](https://fastapi.tiangolo.com/)
+
+6. [Deta. (n.d.). Deta Space Documentation](https://docs.deta.sh/docs/space/about)
+
+7. [Docker. (2021). Docker Documentation](https://docs.docker.com/)
