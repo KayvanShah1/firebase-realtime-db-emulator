@@ -1,5 +1,5 @@
 services:
-  fastapi:
+  firemongo:
     public: true
     image: kayvan999/firebase-realtime-db-emulator:latest
     build: .
