@@ -93,7 +93,7 @@ docker build . -t {DOCKERHUB_USERNAME}/firebase-realtime-db-emulator:latest
 -   Create and run the container
 
 ```bash
-docker run --env_file .env --expose	8000
+docker run --env_file .env --expose 8000
 ```
 
 ## Deploy on Okteto
