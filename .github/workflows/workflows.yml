@@ -1,0 +1,14 @@
+on: [push]
+
+name: Deploy to Okteto
+
+jobs:
+  deploy-okteto:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: okteto/context@latest
+      name: Get the secrets
+      with:
+        token: ${{ secrets.OKTETO_TOKEN }}
+    - name: "Build"
+      uses: okteto/build@latest
