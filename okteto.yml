@@ -1,0 +1,12 @@
+services:
+  fastapi:
+    public: true
+    image: kayvan999/firebase-realtime-db-emulator:latest
+    build: .
+    replicas: 2
+    ports:
+      - 8080
+    resources:
+      cpu: 200m
+      memory: 256Mi
+    env_file: .env
