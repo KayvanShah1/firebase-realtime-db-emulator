@@ -7,7 +7,7 @@
     **Conda** (from scratch)
 
     ```bash
-    export PYTHON_VERSION=3.10.4
+    export PYTHON_VERSION=3.10.10
     conda create --name fastapi python=PYTHON_VERSION
     conda activate fastapi
     ```
