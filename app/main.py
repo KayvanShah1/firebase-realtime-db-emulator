@@ -9,7 +9,7 @@ from app.core import settings
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
+    openapi_url="/openapi.json",
     description="Firebase Realtime Database RestFul API Emulator",
 )
 
