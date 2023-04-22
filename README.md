@@ -80,3 +80,26 @@ Run the command below in the terminal
     ```bash
     gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
     ```
+
+## Deploy
+
+## Deploy on Docker
+
+-   Build the docker image with the following tag
+
+```bash
+docker build . -t {DOCKERHUB_USERNAME}/firebase-realtime-db-emulator:latest
+```
+
+-   Create and run the container
+
+```bash
+docker run --env_file .env --expose	8000
+```
+
+## Deploy on Okteto
+
+```bash
+okteto login
+okteto deploy --build
+```
