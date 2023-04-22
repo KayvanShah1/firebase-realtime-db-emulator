@@ -16,4 +16,5 @@ jobs:
         
     - name: "Build"
       uses: okteto/build@latest
-      tag: kayvan999/firebase-realtime-db-emulator:latest
+      with:
+        tag: kayvan999/firebase-realtime-db-emulator:${{ github.sha }}
