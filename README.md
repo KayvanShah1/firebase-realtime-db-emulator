@@ -41,10 +41,9 @@
 
 ### Creating a .env file
 
--   You can the `example.env` file in the root directory
 -   Create a new environment file named `.env`
--   Copy the contents of the file and paste it into the `.env` file created
-    above
+-   Copy the environment variables from `example.env` file from the root
+    directory and paste it into the `.env` file created above
 -   Add the MongoDB Atlas URI with username and password next to the
     `MONGODB_URI` environment variable
 -   To generate a the secret key, run the following command:
