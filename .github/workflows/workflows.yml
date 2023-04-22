@@ -6,9 +6,13 @@ jobs:
   deploy-okteto:
     runs-on: ubuntu-latest
     steps:
+    - name: checkout
+      uses: actions/checkout@master
+
     - uses: okteto/context@latest
       name: Get the secrets
       with:
         token: ${{ secrets.OKTETO_TOKEN }}
+        
     - name: "Build"
       uses: okteto/build@latest
