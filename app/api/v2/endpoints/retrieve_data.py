@@ -98,9 +98,18 @@ async def query_data_root_v2(
                         "error": "Provided key index type is invalid, must be string"
                     },
                 )
+            if type(startAt) is str:
+                if startAt.startswith('"') and startAt.endswith('"'):
+                    startAt = startAt.strip('"')
+            if type(endAt) is str:
+                if endAt.startswith('"') and endAt.endswith('"'):
+                    endAt = endAt.strip('"')
             collections = order_by_key(collections, startAt, endAt)
 
         if equalTo is not None:
+            if type(equalTo) is str:
+                if equalTo.startswith('"') and equalTo.endswith('"'):
+                    equalTo = equalTo.strip('"')
             if len(collections) > 0:
                 collections = [equalTo] if equalTo in collections else []
 
@@ -134,6 +143,9 @@ async def query_data_root_v2(
             docs = await collection.find({}, {"_id": 0}).to_list(length=None)
 
             if equalTo is not None:
+                if type(equalTo) is str:
+                    if equalTo.startswith('"') and equalTo.endswith('"'):
+                        equalTo = equalTo.strip('"')
                 if docs == equalTo:
                     result[col] = {}
                     for doc in docs:
@@ -143,6 +155,12 @@ async def query_data_root_v2(
                 for doc in docs:
                     result[col].update({doc["_fm_id"]: doc["_fm_val"]})
 
+        if type(startAt) is str:
+            if startAt.startswith('"') and startAt.endswith('"'):
+                startAt = startAt.strip('"')
+        if type(endAt) is str:
+            if endAt.startswith('"') and endAt.endswith('"'):
+                endAt = endAt.strip('"')
         result = order_by_value(result, startAt, endAt)
 
         # Limit Querying and Filtering
@@ -285,11 +303,20 @@ async def query_data_v2(
             if orderBy == '"$key"':
                 if type(existing_data) is list:
                     if startAt is not None:
+                        if type(startAt) is str:
+                            if startAt.startswith('"') and startAt.endswith('"'):
+                                startAt = startAt.strip('"')
                         existing_data = existing_data[int(startAt) :]
                     if endAt is not None:
+                        if type(endAt) is str:
+                            if endAt.startswith('"') and endAt.endswith('"'):
+                                endAt = endAt.strip('"')
                         existing_data = existing_data[: int(endAt)]
 
                     if equalTo is not None:
+                        if type(equalTo) is str:
+                            if equalTo.startswith('"') and equalTo.endswith('"'):
+                                equalTo = equalTo.strip('"')
                         existing_data = (
                             existing_data[int(equalTo)]
                             if int(equalTo) <= len(existing_data)
@@ -308,15 +335,24 @@ async def query_data_v2(
                     )
 
                     if startAt is not None:
+                        if type(startAt) is str:
+                            if startAt.startswith('"') and startAt.endswith('"'):
+                                startAt = startAt.strip('"')
                         existing_data = [
                             (k, v) for k, v in existing_data if str(k) >= str(startAt)
                         ]
                     if endAt is not None:
+                        if type(endAt) is str:
+                            if endAt.startswith('"') and endAt.endswith('"'):
+                                endAt = endAt.strip('"')
                         existing_data = [
                             (k, v) for k, v in existing_data if str(k) <= str(endAt)
                         ]
 
                     if equalTo is not None:
+                        if type(equalTo) is str:
+                            if equalTo.startswith('"') and equalTo.endswith('"'):
+                                equalTo = equalTo.strip('"')
                         existing_data = (
                             (k, v) for k, v in existing_data if str(k) == equalTo
                         )
@@ -350,15 +386,24 @@ async def query_data_v2(
 
                 if type(existing_data) is list:
                     if startAt is not None:
+                        if type(startAt) is str:
+                            if startAt.startswith('"') and startAt.endswith('"'):
+                                startAt = startAt.strip('"')
                         existing_data = [
                             item for item in existing_data if str(item) >= str(startAt)
                         ]
                     if endAt is not None:
+                        if type(endAt) is str:
+                            if endAt.startswith('"') and endAt.endswith('"'):
+                                endAt = endAt.strip('"')
                         existing_data = [
                             item for item in existing_data if str(item) <= str(endAt)
                         ]
 
                     if equalTo is not None:
+                        if type(equalTo) is str:
+                            if equalTo.startswith('"') and equalTo.endswith('"'):
+                                equalTo = equalTo.strip('"')
                         existing_data = [
                             item for item in existing_data if str(item) == str(equalTo)
                         ]
@@ -370,10 +415,19 @@ async def query_data_v2(
                         existing_data = existing_data[-limitToLast:]
 
                 elif type(existing_data) is dict:
+                    if type(startAt) is str:
+                        if startAt.startswith('"') and startAt.endswith('"'):
+                            startAt = startAt.strip('"')
+                    if type(endAt) is str:
+                        if endAt.startswith('"') and endAt.endswith('"'):
+                            endAt = endAt.strip('"')
                     existing_data = order_by_value(existing_data, startAt, endAt)
                     existing_data = existing_data.items()
 
                     if equalTo is not None:
+                        if type(equalTo) is str:
+                            if equalTo.startswith('"') and equalTo.endswith('"'):
+                                equalTo = equalTo.strip('"')
                         existing_data = (
                             (k, v) for k, v in existing_data if str(k) == equalTo
                         )
@@ -437,13 +491,22 @@ async def query_data_v2(
 
                 query = {}
                 if startAt is not None:
+                    if type(startAt) is str:
+                        if startAt.startswith('"') and startAt.endswith('"'):
+                            startAt = startAt.strip('"')
                     query.update({"$gte": startAt})
                 if endAt is not None:
+                    if type(endAt) is str:
+                        if endAt.startswith('"') and endAt.endswith('"'):
+                            endAt = endAt.strip('"')
                     query.update({"$lte": endAt})
                 if query:
                     filter_.update({"_fm_id": query})
 
-            if equalTo:
+            if equalTo is not None:
+                if type(equalTo) is str:
+                    if equalTo.startswith('"') and equalTo.endswith('"'):
+                        equalTo = equalTo.strip('"')
                 filter_.update({"_fm_id": str(equalTo)})
 
             sort_.append(("_fm_id", sort_order))
@@ -462,13 +525,22 @@ async def query_data_v2(
             # Filters: startAt and endAt
             query = {}
             if startAt is not None:
+                if type(startAt) is str:
+                    if startAt.startswith('"') and startAt.endswith('"'):
+                        startAt = startAt.strip('"')
                 query.update({"$gte": startAt})
             if endAt is not None:
+                if type(endAt) is str:
+                    if endAt.startswith('"') and endAt.endswith('"'):
+                        endAt = endAt.strip('"')
                 query.update({"$lte": endAt})
             if query:
                 filter_.update({"_fm_val": query})
 
-            if equalTo:
+            if equalTo is not None:
+                if type(equalTo) is str:
+                    if equalTo.startswith('"') and equalTo.endswith('"'):
+                        equalTo = equalTo.strip('"')
                 filter_.update({"_fm_val": equalTo})
 
             sort_.append(("_fm_val", sort_order))
@@ -490,13 +562,22 @@ async def query_data_v2(
             # Filters: startAt and endAt
             query = {"$exists": True}
             if startAt is not None:
+                if type(startAt) is str:
+                    if startAt.startswith('"') and startAt.endswith('"'):
+                        startAt = startAt.strip('"')
                 query.update({"$gte": startAt})
             if endAt is not None:
+                if type(endAt) is str:
+                    if endAt.startswith('"') and endAt.endswith('"'):
+                        endAt = endAt.strip('"')
                 query.update({"$lte": endAt})
 
             filter_.update({f"_fm_val.{orderBy}": query})
 
-            if equalTo:
+            if equalTo is not None:
+                if type(equalTo) is str:
+                    if equalTo.startswith('"') and equalTo.endswith('"'):
+                        equalTo = equalTo.strip('"')
                 filter_.update({f"_fm_val.{orderBy}": equalTo})
 
             sort_.append((f"_fm_val.{orderBy}", sort_order))

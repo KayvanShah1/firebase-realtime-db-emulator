@@ -1,0 +1,298 @@
+# Demo Flow with examples
+
+1. Start with deleting `nested-users` data
+
+    ```bash
+    curl -X 'DELETE' \
+    'http://127.0.0.1:8000/nested-users.json' \
+    -H 'accept: application/json'
+    ```
+
+2. Insert `nested-users` data
+    <details>
+    <summary>Click me</summary>
+
+    ```bash
+    curl -X 'PUT' \
+    'http://127.0.0.1:8000/.json' \
+    -H 'accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{
+        "nested-users": {
+            "1": {
+                "userId": 1,
+                "name": {
+                    "first": "Krish",
+                    "last": "Lee"
+                },
+                "contact": {
+                    "phoneNumber": "123456",
+                    "emailAddress": "krish.lee@learningcontainer.com"
+                },
+                "age": 54
+            },
+            "2": {
+                "userId": 2,
+                "name": {
+                    "first": "racks",
+                    "last": "jacson"
+                },
+                "contact": {
+                    "phoneNumber": "123456",
+                    "emailAddress": "racks.jacson@learningcontainer.com"
+                },
+                "age": 42
+            },
+            "3": {
+                "userId": 3,
+                "name": {
+                    "first": "denial",
+                    "last": "roast"
+                },
+                "contact": {
+                    "phoneNumber": "33333333",
+                    "emailAddress": "denial.roast@learningcontainer.com"
+                },
+                "age": 87
+            },
+            "4": {
+                "userId": 4,
+                "name": {
+                    "first": "devid",
+                    "last": "neo"
+                },
+                "contact": {
+                    "phoneNumber": "222222222",
+                    "emailAddress": "devid.neo@learningcontainer.com"
+                },
+                "age": 23
+            },
+            "5": {
+                "userId": 5,
+                "name": {
+                    "first": "jone",
+                    "last": "mac"
+                },
+                "contact": {
+                    "phoneNumber": "111111111",
+                    "emailAddress": "jone.mac@learningcontainer.com"
+                },
+                "age": 19
+            },
+            "41": {
+                "userId": 41,
+                "name": {
+                    "first": "Vadilal",
+                    "last": "Amratlal"
+                },
+                "contact": {
+                    "phoneNumber": "9650756485",
+                    "emailAddress": "vadilal.amratlal@gmail.com"
+                },
+                "age": 67
+            },
+            "23": {
+                "userId": 23,
+                "name": {
+                    "first": "Darshan",
+                    "last": "Gala"
+                },
+                "contact": {
+                    "phoneNumber": "7850756485",
+                    "emailAddress": "gala.darshan@gmail.com"
+                },
+                "age": 26
+            },
+            "36": {
+                "userId": 36,
+                "name": {
+                    "first": "John",
+                    "last": "Doe"
+                },
+                "contact": {
+                    "phoneNumber": "7134568907",
+                    "emailAddress": "john78@gmail.com"
+                },
+                "age": 57
+            },
+            "79": {
+                "userId": 79,
+                "name": {
+                    "first": "Parsimon",
+                    "last": "Red"
+                },
+                "contact": {
+                    "phoneNumber": "4572135709",
+                    "emailAddress": "parsimon.red@usc.edu"
+                },
+                "age": 63
+            },
+            "145": {
+                "userId": 145,
+                "name": {
+                    "first": "Liam",
+                    "last": "Smith"
+                },
+                "contact": {
+                    "phoneNumber": "123456",
+                    "emailAddress": "liam.smith@example.com"
+                },
+                "age": 76
+            },
+            "290": {
+                "userId": 290,
+                "name": {
+                    "first": "Ava",
+                    "last": "Johnson"
+                },
+                "contact": {
+                    "phoneNumber": "234567",
+                    "emailAddress": "ava.johnson@example.com"
+                },
+                "age": 7
+            },
+            "315": {
+                "userId": 315,
+                "name": {
+                    "first": "Noah",
+                    "last": "Williams"
+                },
+                "contact": {
+                    "phoneNumber": "345678",
+                    "emailAddress": "noah.williams@example.com"
+                },
+                "age": 43
+            },
+            "403": {
+                "userId": 403,
+                "name": {
+                    "first": "Emma",
+                    "last": "Jones"
+                },
+                "contact": {
+                    "phoneNumber": "456789",
+                    "emailAddress": "emma.jones@example.com"
+                },
+                "age": 15
+            },
+            "512": {
+                "userId": 512,
+                "name": {
+                    "first": "Oliver",
+                    "last": "Brown"
+                },
+                "contact": {
+                    "phoneNumber": "567890",
+                    "emailAddress": "oliver.brown@example.com"
+                },
+                "age": 32
+            },
+            "698": {
+                "userId": 698,
+                "name": {
+                    "first": "Sophia",
+                    "last": "Davis"
+                },
+                "contact": {
+                    "phoneNumber": "678901",
+                    "emailAddress": "sophia.davis@example.com"
+                },
+                "age": 24
+            }
+        }
+    }'
+    ```
+
+    </details>
+
+3. Get the inserted data
+
+    ```bash
+    curl -X 'GET' \
+    'http://127.0.0.1:8000/nested-users.json' \
+    -H 'accept: application/json'
+    ```
+
+4. Insert a dummy user into `nested-user`
+
+    ```bash
+    curl -X 'POST' \
+    'http://127.0.0.1:8000/nested-users.json' \
+    -H 'accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{
+                "userId": 7423,
+                "name": {
+                    "first": "Mia",
+                    "last": "Brownlee"
+                },
+                "contact": {
+                    "phoneNumber": "9876354321",
+                    "emailAddress": "mia.brown@learningcontainer.com"
+                },
+                "age": 21
+            }'
+    ```
+
+5. Update dummy users details
+
+    - Update age of user 698
+
+    ```bash
+    curl -X 'PUT' \
+    'http://127.0.0.1:8000/nested-users/698/age.json' \
+    -H 'accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d 144
+    ```
+
+    - Update 2 fields of user 698
+
+    ```bash
+    curl -X 'PATCH' \
+    'http://127.0.0.1:8000/nested-users/698.json' \
+    -H 'accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{"age": 34, "name/last":"Daviz" }'
+    ```
+
+    - Data of multiple users
+
+    ```bash
+    curl -X 'PATCH' \
+    'http://127.0.0.1:8000/nested-users.json' \
+    -H 'accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{"698/contact/phoneNumber": "6784563213", "512/age":35}'
+    ```
+
+6. Force insert and delete extra field
+
+    ```bash
+    curl -X 'PUT' \
+    'http://127.0.0.1:8000/nested-users/512/extra.json' \
+    -H 'accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d 'true'
+    ```
+
+    ```bash
+    curl -X 'DELETE' \
+    'http://127.0.0.1:8000/nested-users/512/extra.json' \
+    -H 'accept: application/json'
+    ```
+
+    ```bash
+    curl -X 'GET' \
+    'http://127.0.0.1:8000/nested-users/512.json' \
+    -H 'accept: application/json'
+    ```
+
+7. Query for `nested-users` data
+    - Get all data
+    ```bash
+    curl -X 'GET' \
+    'http://127.0.0.1:8000/nested-users.json' \
+    -H 'accept: application/json'
+    ```
+    - Filter on `"$value"`
