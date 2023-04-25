@@ -282,7 +282,7 @@ async def query_data_v2(
                     existing_data = existing_data[k]
 
             # Order by Key
-            if orderBy == "$key":
+            if orderBy == '"$key"':
                 if type(existing_data) is list:
                     if startAt is not None:
                         existing_data = existing_data[int(startAt) :]
@@ -338,7 +338,7 @@ async def query_data_v2(
                         existing_data = existing_data
 
             # Ordering by Value
-            elif orderBy == "$value":
+            elif orderBy == '"$value"':
                 index_ = await check_index(path)
                 if index_ is None or ".value" not in index_:
                     raise HTTPException(
@@ -396,6 +396,8 @@ async def query_data_v2(
 
             # Ordering by child key
             elif type(orderBy) is str:
+                if orderBy.startswith('"') and orderBy.endswith('"'):
+                    orderBy = orderBy.strip('"')
                 index_ = await check_index(path)
                 if index_ is None or orderBy not in index_:
                     raise HTTPException(
@@ -420,7 +422,7 @@ async def query_data_v2(
         sort_order = -1 if limitToLast is not None else 1
 
         # Ordering by key
-        if orderBy == "$key":
+        if orderBy == '"$key"':
             # StartAt & EndAt filters
             if startAt is not None or endAt is not None:
                 if not isinstance(startAt, (str, type(None))) or not isinstance(
@@ -447,7 +449,7 @@ async def query_data_v2(
             sort_.append(("_fm_id", sort_order))
 
         # Ordering by Value
-        elif orderBy == "$value":
+        elif orderBy == '"$value"':
             index_ = await check_index(path)
             if index_ is None or ".value" not in index_:
                 raise HTTPException(
@@ -473,6 +475,8 @@ async def query_data_v2(
 
         # Ordering by child key
         elif type(orderBy) is str:
+            if orderBy.startswith('"') and orderBy.endswith('"'):
+                orderBy = orderBy.strip('"')
             index_ = await check_index(path_components[0])
             if index_ is None or orderBy not in index_:
                 raise HTTPException(
