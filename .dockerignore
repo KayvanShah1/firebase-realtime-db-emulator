@@ -1,0 +1,16 @@
+docs/
+Spacefile
+test
+.vscode/
+__pycache__/
+.space/
+scripts/
+.github/
+.spaceignore
+.gitignore
+.git/
+.sitignore
+LICENSE
+runtime.txt
+.env
+ENV/
