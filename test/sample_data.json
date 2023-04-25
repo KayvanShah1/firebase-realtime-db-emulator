@@ -34,6 +34,34 @@
             "lastName": "mac",
             "phoneNumber": "111111111",
             "emailAddress": "jone.mac@learningcontainer.com"
+        },
+        "41": {
+            "userId": 41,
+            "firstName": "Vadilal",
+            "lastName": "Amratlal",
+            "phoneNumber": "9650756485",
+            "emailAddress": "vadilal.amratlal@gmail.com"
+        },
+        "23": {
+            "userId": 23,
+            "firstName": "Darshan",
+            "lastName": "Gala",
+            "phoneNumber": "7850756485",
+            "emailAddress": "gala.darshan@gmail.com"
+        },
+        "36": {
+            "userId": 36,
+            "firstName": "John",
+            "lastName": "Doe",
+            "phoneNumber": "7134568907",
+            "emailAddress": "john78@gmail.com"
+        },
+        "79": {
+            "userId": 79,
+            "firstName": "Parsimon",
+            "lastName": "Red",
+            "phoneNumber": "4572135709",
+            "emailAddress": "parsimon.red@usc.edu"
         }
     },
     "quiz": {
