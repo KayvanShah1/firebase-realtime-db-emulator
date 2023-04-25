@@ -12,5 +12,5 @@ scripts/
 .sitignore
 LICENSE
 runtime.txt
-.env
+# .env
 ENV/
