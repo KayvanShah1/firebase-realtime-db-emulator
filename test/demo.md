@@ -289,10 +289,47 @@
     ```
 
 7. Query for `nested-users` data
+
     - Get all data
+
     ```bash
     curl -X 'GET' \
     'http://127.0.0.1:8000/nested-users.json' \
     -H 'accept: application/json'
     ```
-    - Filter on `"$value"`
+
+    - Set index for nested-users
+
+    ```bash
+    curl -X 'PUT' \
+    'http://127.0.0.1:8000/set-index?path=nested-users' \
+    -H 'accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '[".value", "age", "name/first"]'
+    ```
+
+    - Values starting ordering by first name
+
+    ```bash
+    curl -X 'GET' \
+    'http://127.0.0.1:8000/nested-users.json?orderBy=%22name%2Ffirst%22&limitToFirst=2' \
+    -H 'accept: application/json'
+    ```
+
+    ```bash
+    curl -X 'GET' \
+    'http://127.0.0.1:8000/nested-users.json?orderBy=%22name%2Ffirst%22&startAt=%22M%22&endAt=%22T%22' \
+    -H 'accept: application/json'
+    ```
+
+    ```bash
+    curl -X 'GET' \
+    'http://127.0.0.1:8000/nested-users.json?orderBy=%22name%2Ffirst%22&equalTo=%22Noah%22' \
+    -H 'accept: application/json'
+    ```
+
+    ```bash
+    curl -X 'GET' \
+    'http://127.0.0.1:8000/sample-dummy.json?orderBy=%22%24value%22&limitToLast=2&startAt=%22s%22' \
+    -H 'accept: application/json'
+    ```
