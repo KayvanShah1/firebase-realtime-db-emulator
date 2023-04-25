@@ -80,13 +80,13 @@ async def query_data_root_v2(
     collections.sort()
 
     # Limit Querying and Filtering
-    if limitToFirst is not None:
-        collections = collections[:limitToFirst]
-    if limitToLast is not None:
-        collections = collections[-limitToLast:]
+    # if limitToFirst is not None:
+    #     collections = collections[:limitToFirst]
+    # if limitToLast is not None:
+    #     collections = collections[-limitToLast:]
 
     # Sorting and ordering of JSON documents
-    if orderBy == "$key":
+    if orderBy == '"$key"':
         # StartAt & EndAt filters
         if startAt is not None or endAt is not None:
             if not isinstance(startAt, (str, type(None))) or not isinstance(
@@ -104,6 +104,12 @@ async def query_data_root_v2(
             if len(collections) > 0:
                 collections = [equalTo] if equalTo in collections else []
 
+        # Limit Querying and Filtering
+        if limitToFirst is not None:
+            collections = collections[:limitToFirst]
+        if limitToLast is not None:
+            collections = collections[-limitToLast:]
+
         if len(collections) > 0:
             for col in collections:
                 collection = get_collection(col)
@@ -113,7 +119,7 @@ async def query_data_root_v2(
                 for doc in docs:
                     result[col].update({doc["_fm_id"]: doc["_fm_val"]})
 
-    elif orderBy == "$value":
+    elif orderBy == '"$value"':
         index_ = await check_index()
         if index_ is None or ".value" not in index_:
             raise HTTPException(
@@ -139,8 +145,19 @@ async def query_data_root_v2(
 
         result = order_by_value(result, startAt, endAt)
 
+        # Limit Querying and Filtering
+        if limitToFirst is not None or limitToLast is not None:
+            result = [(k, v) for k, v in result.items()]
+            if limitToFirst is not None:
+                result = result[:limitToFirst]
+            if limitToLast is not None:
+                result = result[-limitToLast:]
+            result = {k: v for k, v in result}
+
     # Filtering by a specified child key
     elif type(orderBy) is str:
+        if orderBy.startswith('"') and orderBy.endswith('"'):
+            orderBy = orderBy.strip('"')
         index_ = await check_index()
         if not index_ or orderBy not in index_:
             raise HTTPException(
@@ -149,6 +166,24 @@ async def query_data_root_v2(
                     "error": f'Index not defined, add ".indexOn": "{orderBy}", for path "/", to the rules'
                 },
             )
+
+        if startAt is not None or endAt is not None or equalTo is not None:
+            collections = []
+
+        # Limit Querying and Filtering
+        if limitToFirst is not None:
+            collections = collections[:limitToFirst]
+        if limitToLast is not None:
+            collections = collections[-limitToLast:]
+
+        if len(collections) > 0:
+            for col in collections:
+                collection = get_collection(col)
+                docs = await collection.find({}, {"_id": 0}).to_list(length=None)
+
+                result[col] = {}
+                for doc in docs:
+                    result[col].update({doc["_fm_id"]: doc["_fm_val"]})
     # No filter
     else:
         for col in collections:
