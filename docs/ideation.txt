@@ -19,6 +19,14 @@ collection = collection
 _fm_id = data.keys()
 _fm_val = data.values()
 
+------------------------------------
+/
+data = a JSON object
+collection = data.keys(), a JSON object
+_fm_id = collection.keys()
+_fm_val = collection.values()
+
+
 #########################################################################################################
 ROOT LEVEL OPERATIONS
 #########################################################################################################
