@@ -102,7 +102,14 @@ Run the command below in the terminal
 
 ## Deploy on Docker
 
+-   Build the docker image with the following tag
+
+    ```bash
+    docker build . -t {DOCKERHUB_USERNAME}/firebase-realtime-db-emulator:latest
+    ```
+
 -   Create and run the container
+
     ```bash
     docker compose up
     ```
