@@ -54,7 +54,6 @@ jobs:
         with:
           builder: ${{ steps.buildx.outputs.name }}
           push: true
-          load: true
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/firebase-realtime-db-emulator:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
