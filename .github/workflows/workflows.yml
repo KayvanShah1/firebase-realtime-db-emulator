@@ -7,6 +7,10 @@ name: Deploy to Okteto
 
 jobs:
   deploy-okteto:
+    # add environment variables
+    environment:
+      name: "Okteto Deployment"
+
     runs-on: ubuntu-latest
     steps:
     - name: checkout
@@ -26,6 +30,10 @@ jobs:
     name: Build Docker image and push to repositories
     # run only when code is compiling and tests are passing
     runs-on: ubuntu-latest
+
+    # add environment variables
+    environment:
+      name: "Docker Deployement"
 
     # steps to perform in job
     steps:
