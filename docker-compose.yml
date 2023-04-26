@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  firemongo:
+    image: kayvan999/firebase-realtime-db-emulator:latest
+    build: .
+    volumes:
+      - .:/usr/src/app
+    ports:
+      - 8080:8080
+    env_file:
+      - .env
+    command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload"

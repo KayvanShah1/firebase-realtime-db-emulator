@@ -102,21 +102,9 @@ Run the command below in the terminal
 
 ## Deploy on Docker
 
--   Build the docker image with the following tag
-
-```bash
-docker build . -t {DOCKERHUB_USERNAME}/firebase-realtime-db-emulator:latest
-```
-
 -   Create and run the container
-
-```bash
-docker run {DOCKERHUB_USERNAME}/firebase-realtime-db-emulator:latest --env-file .env --expose 8080
-```
-
-    - Running an existing image
     ```bash
-    docker run kayvan999/firebase-realtime-db-emulator:latest --env-file .env --expose 8080
+    docker compose up
     ```
 
 ## Deploy on Okteto
