@@ -597,4 +597,7 @@ async def query_data_v2(
         result = {}
         for doc in docs:
             result[doc["_fm_id"]] = doc["_fm_val"]
+
+        if limitToLast:
+            result = dict(reversed(list(result.items())))
         return result
