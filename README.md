@@ -1,5 +1,8 @@
 # FireMongo
 
+![Landing Page](/docs/imgs/landing-page.png)
+
+## About
 FireMongo is a project aimed at integrating the functionalities of Firebase Realtime Database with the robust querying and indexing capabilities of MongoDB. The goal is to create a seamless data management system that leverages the strengths of both databases while emulating the RESTful functionalities of Firebase. This project was developed to simplify data operations, enhance data retrieval efficiency, and provide a flexible yet powerful backend for various applications.
 
 ## Description
@@ -29,6 +32,8 @@ FireMongo is a project aimed at integrating the functionalities of Firebase Real
 - **PATCH**: Partially update specific fields in an existing entry.
 - **DELETE**: Remove entries from the database securely and efficiently.
 - **Rules Configuration**: Set and modify indexes to optimize query performance and maintain data integrity.
+
+![Landing Page](/docs/imgs/swagger-docs.png)
 
 ### Summary
 
