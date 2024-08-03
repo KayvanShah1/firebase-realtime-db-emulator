@@ -1,6 +1,40 @@
 # FireMongo
 
-This project is a REST API for storing and retrieving data documents. It allows
+FireMongo is a project aimed at integrating the functionalities of Firebase Realtime Database with the robust querying and indexing capabilities of MongoDB. The goal is to create a seamless data management system that leverages the strengths of both databases while emulating the RESTful functionalities of Firebase. This project was developed to simplify data operations, enhance data retrieval efficiency, and provide a flexible yet powerful backend for various applications.
+
+## Description
+
+### Main Features
+
+1. **Data Model Design**: Implemented a data model that effectively utilizes MongoDB's querying and indexing features while replicating the JSON structure of Firebase.
+2. **RESTful API Endpoints**: Developed comprehensive RESTful API endpoints (GET, POST, PUT, PATCH, DELETE) to manage data operations seamlessly, emulating Firebase's CRUD functionalities.
+3. **Rules Configuration**: Configured and managed rules for setting indexes and modifying them to ensure data integrity and optimize query performance.
+4. **Automatic API Documentation**: Utilized OpenAPI specification for automatic API documentation, making it easy for developers to understand and use the API.
+5. **Deployment**: Deployed the application using Docker and Okteto Cloud for scalable and efficient cloud-native application management.
+6. **Testing**: Ensured robust testing of endpoints using `curl` commands and other testing frameworks.
+
+### Implementations
+
+- **Data Modeling**: Designed two versions of data models. The initial version used a nested document structure, which was later optimized to improve read and write operations.
+- **API Development**: Created RESTful API endpoints to handle CRUD operations efficiently, closely following the RESTful functionalities of Firebase.
+- **Rules Configuration**: Implemented server-side logic for rules configuration to set and modify indexes, ensuring optimal performance and data integrity.
+- **Server-Side Logic**: Implemented complex data filtering and querying to optimize performance.
+- **Deployment and Testing**: Deployed the application using Docker, ensuring it is easily portable and manageable across different environments. Conducted extensive testing to ensure reliability and performance.
+
+### Purpose of RESTful API Endpoints
+
+- **GET**: Retrieve data from the database with support for complex filtering and querying.
+- **POST**: Create new entries in the database with a flexible data structure.
+- **PUT**: Update existing entries with new data, ensuring data integrity and consistency.
+- **PATCH**: Partially update specific fields in an existing entry.
+- **DELETE**: Remove entries from the database securely and efficiently.
+- **Rules Configuration**: Set and modify indexes to optimize query performance and maintain data integrity.
+
+### Summary
+
+FireMongo aims to bridge the gap between Firebase Realtime Database's JSON structure and MongoDB's powerful querying capabilities, while emulating the RESTful functionalities of Firebase. By leveraging the strengths of both databases, this project provides a robust backend solution for managing complex data operations. The RESTful API endpoints offer a flexible and efficient way to interact with the database, making it a versatile tool for developers. The project's deployment using Docker and Okteto Cloud ensures scalability and ease of management, making it suitable for various application needs.
+
+<!-- This project is a REST API for storing and retrieving data documents. It allows
 users to create new data documents by sending a POST request to the API
 endpoint.
 
@@ -14,7 +48,7 @@ framework, with asynchronous programming using the asyncio library. It also uses
 the PyMongo library for interfacing with MongoDB.
 
 The API includes error handling and input validation to ensure data integrity
-and prevent unexpected errors.
+and prevent unexpected errors. -->
 
 # Getting Started
 
