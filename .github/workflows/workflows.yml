@@ -11,6 +11,8 @@ jobs:
     environment:
       name: "Okteto Deployment"
 
+    needs: build-and-push-to-dockerhub
+
     runs-on: ubuntu-latest
     steps:
     - name: checkout
