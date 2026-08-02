@@ -162,9 +162,9 @@ The workflow in `.github/workflows/ci-cd.yml` performs the following gated seque
 
 ### Configure Render
 
-1. In Render, create an image-backed Web Service for `ghcr.io/kayvanshah1/firebase-realtime-db-emulator:latest` and set its health check path to `/health`.
+1. Connect the repository as a Render Blueprint using `render.yaml`. It defines the free Singapore `firemongo` image-backed service, its GHCR image, `/health` check, port, generated `SECRET_KEY`, and the required `MONGODB_URI` prompt.
 2. If the GHCR package is private, add a GitHub registry credential in Render using a personal access token with `read:packages`. A public package needs no registry credential.
-3. Add runtime secrets such as `MONGODB_URI` and `SECRET_KEY` in the Render service environment. The container automatically binds to Render's `PORT` value.
+3. The container automatically binds to Render's `PORT` value. Add any additional runtime settings through the Render service environment.
 4. Disable Render Auto-Deploy because GitHub Actions owns the deployment trigger.
 5. In GitHub, create an environment named `render` and add `RENDER_SERVICE_ID` and `RENDER_API_KEY` as environment secrets. The service ID is shown on the Render service page; create the API key under Render Account Settings.
 
