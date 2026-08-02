@@ -1,14 +1,8 @@
-import uuid
-from typing import Optional
-import pymongo
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.encoders import jsonable_encoder
+from fastapi import APIRouter, status
 
-from app.db.database import get_collection, base_collection
+from app.api.v1.endpoints.utils import replace_prefix
 from app.crud.mongo import get_data
-from app.api.v1.endpoints.utils import (
-    replace_prefix,
-)
+from app.db.database import get_base_collection
 
 router = APIRouter()
 
@@ -19,15 +13,15 @@ router = APIRouter()
     response_description="Sucessfully fetched data",
 )
 async def query_data_root(
-    orderBy: Optional[str | None] = None,
-    limitToFirst: Optional[int | None] = None,
-    limitToLast: Optional[int | None] = None,
-    equalTo: Optional[int | str | None] = None,
-    startAt: Optional[int | str | None] = None,
-    endAt: Optional[int | str | None] = None,
+    orderBy: str | None = None,
+    limitToFirst: int | None = None,
+    limitToLast: int | None = None,
+    equalTo: int | str | None = None,
+    startAt: int | str | None = None,
+    endAt: int | str | None = None,
 ):
     # collection = get_collection()
-    collection = base_collection
+    collection = get_base_collection()
     result = await get_data(
         path=None,
         collection=collection,
@@ -48,16 +42,16 @@ async def query_data_root(
 )
 async def query_data(
     path: str,
-    orderBy: Optional[str | None] = None,
-    limitToFirst: Optional[int | None] = None,
-    limitToLast: Optional[int | None] = None,
-    equalTo: Optional[int | str | None] = None,
-    startAt: Optional[int | str | None] = None,
-    endAt: Optional[int | str | None] = None,
+    orderBy: str | None = None,
+    limitToFirst: int | None = None,
+    limitToLast: int | None = None,
+    equalTo: int | str | None = None,
+    startAt: int | str | None = None,
+    endAt: int | str | None = None,
 ):
     # collection = get_collection()
     path = replace_prefix(path)
-    collection = base_collection
+    collection = get_base_collection()
     result = await get_data(
         path=path,
         collection=collection,

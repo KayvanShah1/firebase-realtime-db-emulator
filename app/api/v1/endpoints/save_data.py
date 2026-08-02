@@ -1,14 +1,14 @@
 import uuid
+from copy import deepcopy
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Body, HTTPException, status
 
 from app.api.v1.endpoints.utils import (
     _check_empty_payload,
     _if_structure_exists,
     replace_prefix,
 )
-
-from app.db.database import base_collection, get_collection
+from app.db.database import get_base_collection
 from app.schemas.data import PostDataResponse
 
 router = APIRouter()
@@ -20,14 +20,14 @@ router = APIRouter()
     response_model=PostDataResponse,
     response_description="Sucessfully created data document",
 )
-async def push_data_root(data: str | list | dict | bool = None) -> dict:
+async def push_data_root(data: str | list | dict | bool = Body(default=None)) -> dict:
     _check_empty_payload(data)
 
     # Create a new ID for data to insert
     id = uuid.uuid4().hex
     data = {id: data}
 
-    collection = base_collection
+    collection = get_base_collection()
 
     # Push Data
     new_data = await collection.insert_one(data)
@@ -48,11 +48,11 @@ async def push_data_root(data: str | list | dict | bool = None) -> dict:
     response_description="Sucessfully created data document",
 )
 async def put_data_root(
-    data: str | list | dict | bool = None,
+    data: str | list | dict | bool = Body(default=None),
 ) -> str | list | dict | bool:
     _check_empty_payload(data)
-    og_data = data
-    collection = base_collection
+    og_data = deepcopy(data)
+    collection = get_base_collection()
     # collection = get_collection("demo")
     await collection.drop()
     # Push Data
@@ -74,8 +74,7 @@ async def put_data_root(
     response_description="Sucessfully deleted data",
 )
 async def delete_data_root() -> None:
-    await base_collection.drop()
-    return None
+    await get_base_collection().drop()
 
 
 @router.post(
@@ -84,12 +83,12 @@ async def delete_data_root() -> None:
     response_model=PostDataResponse,
     response_description="Sucessfully created data document",
 )
-async def post_data(path: str, data: str | list | dict | bool = None) -> dict:
+async def post_data(path: str, data: str | list | dict | bool = Body(default=None)) -> dict:
     path = replace_prefix(path)
     _check_empty_payload(data)
 
     # collection = get_collection(path_components[0])
-    collection = base_collection
+    collection = get_base_collection()
 
     # Create a new ID for data to insert
     id = uuid.uuid4().hex
@@ -109,7 +108,7 @@ async def post_data(path: str, data: str | list | dict | bool = None) -> dict:
         # Traverse and update existing sub-document
         for key in path_components[:-1]:
             existing_data = existing_data[key]
-        if not path_components[-1] in existing_data.keys():
+        if path_components[-1] not in existing_data.keys():
             data = {path_components[-1]: data}
             _update_key = parent_key
         else:
@@ -118,15 +117,9 @@ async def post_data(path: str, data: str | list | dict | bool = None) -> dict:
         existing_data.update(data)
 
         # Update existing sub-document
-        new_data = await collection.update_one(
-            {"_id": _id}, {"$set": {_update_key: existing_data}}, upsert=True
-        )
+        new_data = await collection.update_one({"_id": _id}, {"$set": {_update_key: existing_data}}, upsert=True)
         # Validate the upserted data
-        if (
-            new_data.modified_count > 0
-            or new_data.matched_count > 0
-            or new_data.upserted_id
-        ):
+        if new_data.modified_count > 0 or new_data.matched_count > 0 or new_data.upserted_id:
             valid = True
     else:
         # Traverse over the path components
@@ -150,14 +143,12 @@ async def post_data(path: str, data: str | list | dict | bool = None) -> dict:
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully created data document",
 )
-async def put_data(
-    path: str, data: str | list | dict | bool = None
-) -> str | list | dict | bool:
+async def put_data(path: str, data: str | list | dict | bool = Body(default=None)) -> str | list | dict | bool:
     path = replace_prefix(path)
     _check_empty_payload(data)
 
-    collection = base_collection
-    og_data = data
+    collection = get_base_collection()
+    og_data = deepcopy(data)
 
     # Recreate MongoDB style key
     path_components = path.strip("/").split("/")
@@ -171,15 +162,9 @@ async def put_data(
         _id = existing_data["_id"]
 
         # Update existing sub-document
-        new_data = await collection.update_one(
-            {"_id": _id}, {"$set": {nested_key: data}}, upsert=True
-        )
+        new_data = await collection.update_one({"_id": _id}, {"$set": {nested_key: data}}, upsert=True)
         # Validate the upserted data
-        if (
-            new_data.modified_count > 0
-            or new_data.matched_count > 0
-            or new_data.upserted_id
-        ):
+        if new_data.modified_count > 0 or new_data.matched_count > 0 or new_data.upserted_id:
             valid = True
     else:
         # Traverse over the path components
@@ -203,12 +188,10 @@ async def put_data(
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully updated data",
 )
-async def update_data(
-    path: str, data: str | list | dict | bool = None
-) -> str | list | dict | bool:
+async def update_data(path: str, data: str | list | dict | bool = Body(default=None)) -> str | list | dict | bool:
     path = replace_prefix(path)
-    collection = base_collection
-    og_data = data
+    collection = get_base_collection()
+    og_data = deepcopy(data)
 
     # Recreate MongoDB style key
     path_components = path.strip("/").split("/")
@@ -223,27 +206,17 @@ async def update_data(
 
         # Check if data key has path component
         if type(data) is dict:
-            _is_path_componment_data = [
-                True if "/" in k else False for k in data.keys()
-            ]
+            _is_path_componment_data = [True if "/" in k else False for k in data.keys()]
             if True in _is_path_componment_data:
-                setter = {
-                    f"{nested_key}.{k.replace('/', '.')}": v for k, v in data.items()
-                }
+                setter = {f"{nested_key}.{k.replace('/', '.')}": v for k, v in data.items()}
             else:
-                setter = {nested_key: data}
+                setter = {f"{nested_key}.{key}": value for key, value in data.items()}
         else:
             setter = {nested_key: data}
         # Update existing sub-document
-        new_data = await collection.update_one(
-            {"_id": _id}, {"$set": setter}, upsert=True
-        )
+        new_data = await collection.update_one({"_id": _id}, {"$set": setter}, upsert=True)
         # Validate the upserted data
-        if (
-            new_data.modified_count > 0
-            or new_data.matched_count > 0
-            or new_data.upserted_id
-        ):
+        if new_data.modified_count > 0 or new_data.matched_count > 0 or new_data.upserted_id:
             valid = True
     else:
         # Traverse over the path components
@@ -270,7 +243,7 @@ async def update_data(
 async def delete_data(path: str):
     path = replace_prefix(path)
     # collection = get_collection(path_components[0])
-    collection = base_collection
+    collection = get_base_collection()
 
     path_components = path.strip("/").split("/")
 
@@ -284,15 +257,9 @@ async def delete_data(path: str):
         if existing_data is not None:
             # Drop the field from document
             _id = existing_data["_id"]
-            result = await collection.update_one(
-                {"_id": _id}, {"$unset": {nested_key: ""}}
-            )
+            result = await collection.update_one({"_id": _id}, {"$unset": {nested_key: ""}})
             # Validate the upserted data
-            if (
-                result.modified_count > 0
-                or result.matched_count > 0
-                or result.upserted_id
-            ):
+            if result.modified_count > 0 or result.matched_count > 0 or result.upserted_id:
                 valid = True
 
             # Confirm the modification
@@ -308,7 +275,4 @@ async def delete_data(path: str):
                 detail="Internal Server Error",
             )
     else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Key doesn't exist"
-        )
-    return None
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Key doesn't exist")

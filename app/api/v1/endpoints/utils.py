@@ -1,5 +1,6 @@
 from fastapi import HTTPException, status
-from app.core import settings
+
+from app.core.settings import settings
 
 
 async def _if_structure_exists(collection, key: str) -> bool:
@@ -28,10 +29,8 @@ def _check_empty_payload(payload) -> Exception:
         HTTPException: _description_
     """
     if payload is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Data cannot be None"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Data cannot be None")
 
 
 def replace_prefix(path: str):
-    return path.replace(settings.API_V1_PREFIX, "")
+    return path.replace(settings.api_v1_prefix, "")

@@ -1,4 +1,6 @@
-# Demo Flow with examples
+# University Presentation Demo Flow
+
+This is the original manual walkthrough used for the university presentation. The same behavior is covered by the automated pytest integration suite in `tests/integration/test_demo_flow.py`.
 
 1. Start with deleting `nested-users` data
 

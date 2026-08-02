@@ -1,14 +1,14 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Path, status
+from fastapi import APIRouter, Body, HTTPException, Path, status
 
 from app.api.v2.endpoints.utils import (
     _check_data_type_for_root,
     _check_empty_payload,
     unwrap_path_to_dict,
 )
-from app.db.database import db, get_collection
+from app.db.database import get_collection, get_database
 from app.schemas.data import PostDataResponse
 
 router = APIRouter()
@@ -21,7 +21,7 @@ router = APIRouter()
     response_description="Sucessfully created data document",
 )
 async def post_data_root_v2(
-    data: dict = {"user101": {"first_name": "John", "last_name": "Wick"}}
+    data: dict = Body(default={"user101": {"first_name": "John", "last_name": "Wick"}}),
 ) -> dict:
     """
     Create a new data document.
@@ -68,10 +68,12 @@ async def post_data_root_v2(
     response_description="Sucessfully created data document",
 )
 async def put_data_root_v2(
-    data: dict = {
-        "dummy": {"type": "string", "value": "arbitary"},
-        "examples": {"type": "string", "value": "arbitary"},
-    }
+    data: dict = Body(
+        default={
+            "dummy": {"type": "string", "value": "arbitary"},
+            "examples": {"type": "string", "value": "arbitary"},
+        }
+    ),
 ) -> dict:
     """
     Create or update documents in the root collection.
@@ -137,7 +139,7 @@ async def delete_data_root_v2() -> None:
 
         - None: this function does not raise any exceptions.
     """
-    collections = await db.list_collection_names()
+    collections = await get_database().list_collection_names()
     for col in collections:
         await get_collection(col).drop()
     return None
@@ -149,7 +151,7 @@ async def delete_data_root_v2() -> None:
     response_model=PostDataResponse,
     response_description="Sucessfully created data document",
 )
-async def post_data_v2(path: str, data: dict | Any = None) -> dict:
+async def post_data_v2(path: str, data: dict | Any = Body(default=None)) -> dict:
     # Recreate MongoDB style key
     path_components = path.strip("/").split("/")
     collection = get_collection(path_components[0])
@@ -174,9 +176,7 @@ async def post_data_v2(path: str, data: dict | Any = None) -> dict:
         nested_key = f"_fm_val.{nested_key}".strip(".")
         parent_key = f"_fm_val.{parent_key}".strip(".")
 
-        existing_data = await collection.find_one(
-            {"_fm_id": _fm_id, parent_key: {"$exists": True}}
-        )
+        existing_data = await collection.find_one({"_fm_id": _fm_id, parent_key: {"$exists": True}})
         if existing_data is not None:
             _id = existing_data["_id"]
 
@@ -187,20 +187,14 @@ async def post_data_v2(path: str, data: dict | Any = None) -> dict:
                 upsert=True,
             )
             # Validate the upserted data
-            if (
-                new_data.modified_count > 0
-                or new_data.matched_count > 0
-                or new_data.upserted_id
-            ):
+            if new_data.modified_count > 0 or new_data.matched_count > 0 or new_data.upserted_id:
                 valid = True
         else:
             # Traverse over the path components
             for key in path_components[:1:-1]:
                 data = {key: data}
             # Push Data
-            new_data = await collection.insert_one(
-                {"_fm_id": random_id, "_fm_val": data}
-            )
+            new_data = await collection.insert_one({"_fm_id": random_id, "_fm_val": data})
             # Validation
             valid = await collection.find_one({"_id": new_data.inserted_id}, {"_id": 0})
 
@@ -208,7 +202,7 @@ async def post_data_v2(path: str, data: dict | Any = None) -> dict:
     else:
         try:
             await collection.create_index("_fm_id", unique=True, name="_fm_id_")
-        except Exception as e:
+        except Exception:
             pass
         # Push Data
         result = await collection.insert_one({"_fm_id": random_id, "_fm_val": data})
@@ -229,7 +223,8 @@ async def post_data_v2(path: str, data: dict | Any = None) -> dict:
     response_description="Sucessfully created data document",
 )
 async def put_data_v2(
-    path: str, data: dict | int | float | str | list | bool = None
+    path: str,
+    data: dict | int | float | str | list | bool = Body(default=None),
 ) -> int | float | str | list | dict | bool:
     """
     Create or update a document at the given path in MongoDB collection.
@@ -278,9 +273,7 @@ async def put_data_v2(
         nested_key = f"_fm_val.{nested_key}".strip(".")
         parent_key = f"_fm_val.{parent_key}".strip(".")
 
-        existing_data = await collection.find_one(
-            {"_fm_id": _fm_id, parent_key: {"$exists": True}}
-        )
+        existing_data = await collection.find_one({"_fm_id": _fm_id, parent_key: {"$exists": True}})
         if existing_data is not None:
             _id = existing_data["_id"]
 
@@ -291,11 +284,7 @@ async def put_data_v2(
                 upsert=True,
             )
             # Validate the upserted data
-            if (
-                new_data.modified_count > 0
-                or new_data.matched_count > 0
-                or new_data.upserted_id
-            ):
+            if new_data.modified_count > 0 or new_data.matched_count > 0 or new_data.upserted_id:
                 valid = True
         else:
             # Traverse over the path components
@@ -316,7 +305,7 @@ async def put_data_v2(
             docs = [{"_fm_id": k, "_fm_val": v} for k, v in data.items()]
         else:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Only documents with data type 'dict' and 'list' are allowed",
             )
         # Insert the documents
@@ -341,7 +330,7 @@ async def put_data_v2(
 )
 async def update_data_v2(
     path: str = Path(description="Enter the path to update data"),
-    data: dict = {"key": "value"},
+    data: dict = Body(default={"key": "value"}),
 ) -> dict:
     """Updates data in a collection or a specific document.
 
@@ -384,23 +373,15 @@ async def update_data_v2(
         nested_key = f"_fm_val.{nested_key}".strip(".")
         parent_key = f"_fm_val.{parent_key}".strip(".")
 
-        existing_data = await collection.find_one(
-            {"_fm_id": _fm_id, parent_key: {"$exists": True}}
-        )
+        existing_data = await collection.find_one({"_fm_id": _fm_id, parent_key: {"$exists": True}})
         if existing_data is not None:
             _id = existing_data["_id"]
 
-            setter = {f"{nested_key}.{k.replace('/','.')}": v for k, v in data.items()}
+            setter = {f"{nested_key}.{k.replace('/', '.')}": v for k, v in data.items()}
             # Update or upsert the data
-            new_data = await collection.update_one(
-                {"_id": _id}, {"$set": setter}, upsert=True
-            )
+            new_data = await collection.update_one({"_id": _id}, {"$set": setter}, upsert=True)
             # Validate the upserted data
-            if (
-                new_data.modified_count > 0
-                or new_data.matched_count > 0
-                or new_data.upserted_id
-            ):
+            if new_data.modified_count > 0 or new_data.matched_count > 0 or new_data.upserted_id:
                 valid = True
 
         else:
@@ -434,9 +415,7 @@ async def update_data_v2(
                     else:
                         setter = {"_fm_val": v}
                 # Update or upsert the data
-                await collection.update_one(
-                    {"_fm_id": _fm_id}, {"$set": setter}, upsert=True
-                )
+                await collection.update_one({"_fm_id": _fm_id}, {"$set": setter}, upsert=True)
 
         # Upserting new or old data
         else:
@@ -492,7 +471,7 @@ async def delete_data_v2(path: str = Path(description="Enter the path to remove 
     path_components = path.strip("/").split("/")
 
     # Check if collection exists
-    if path_components[0] in await db.list_collection_names():
+    if path_components[0] in await get_database().list_collection_names():
         collection = get_collection(path_components[0])
 
         if len(path_components) > 1:
@@ -504,20 +483,12 @@ async def delete_data_v2(path: str = Path(description="Enter the path to remove 
             nested_key = ".".join(child_components)
             nested_key = f"_fm_val.{nested_key}".strip(".")
 
-            existing_data = await collection.find_one(
-                {"_fm_id": _fm_id, nested_key: {"$exists": True}}
-            )
+            existing_data = await collection.find_one({"_fm_id": _fm_id, nested_key: {"$exists": True}})
             if existing_data is not None:
                 _id = existing_data["_id"]
-                result = await collection.update_one(
-                    {"_id": _id, "_fm_id": _fm_id}, {"$unset": {nested_key: ""}}
-                )
+                result = await collection.update_one({"_id": _id, "_fm_id": _fm_id}, {"$unset": {nested_key: ""}})
                 # Validate the upserted data
-                if (
-                    result.modified_count > 0
-                    or result.matched_count > 0
-                    or result.upserted_id
-                ):
+                if result.modified_count > 0 or result.matched_count > 0 or result.upserted_id:
                     valid = True
 
                 # Confirm the modification

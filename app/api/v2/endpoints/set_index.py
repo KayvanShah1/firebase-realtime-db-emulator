@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Body, HTTPException, status
 
 from app.db.database import get_collection
 
@@ -11,7 +11,8 @@ router = APIRouter()
     response_description="Successfully set the index for the provided path",
 )
 async def set_index(
-    path: str = None, index_on: str | dict | list = ".value"
+    path: str = None,
+    index_on: str | dict | list = Body(default=".value"),
 ) -> dict | None:
     """This route allows users to set an index for a specific path in their MongoDB collection. The user can provide a
     path and an index_on argument that can be either a string, a dictionary, or a list.
@@ -32,19 +33,11 @@ async def set_index(
             upsert=True,
         )
         # Validate the upserted data
-        if (
-            new_data.modified_count > 0
-            or new_data.matched_count > 0
-            or new_data.upserted_id
-        ):
+        if new_data.modified_count > 0 or new_data.matched_count > 0 or new_data.upserted_id:
             valid = True
     else:
-        new_index = await index_collection.insert_one(
-            {"path": path, "indexOn": index_on}
-        )
-        valid = await index_collection.find_one(
-            {"_id": new_index.inserted_id}, {"_id": 0}
-        )
+        new_index = await index_collection.insert_one({"path": path, "indexOn": index_on})
+        valid = await index_collection.find_one({"_id": new_index.inserted_id}, {"_id": 0})
 
     if not valid:
         raise HTTPException(

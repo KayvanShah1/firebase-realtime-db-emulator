@@ -1,7 +1,7 @@
 from typing import Optional
-from pymongo.collection import Collection
+
 from fastapi import HTTPException, status
-from fastapi.encoders import jsonable_encoder
+from pymongo.collection import Collection
 
 
 def get_mongo_style_path(path):
@@ -21,25 +21,14 @@ async def get_data(
     startAt: Optional[int | str | None] = None,
     endAt: Optional[int | str | None] = None,
 ):
-    aggregation_query = []
-
     if path is None:
-        filter = {}
-        project = {"$project": {"_id": 0}}
-        # aggregation_query.append(project)
+        result = await collection.find_one({}, {"_id": 0})
     else:
         nested_key = get_mongo_style_path(path)
-
-        filter = {"$match": {nested_key: {"$exists": True}}}
-        project = {"$project": {"_id": 0, "data": f"${nested_key}"}}
-        # aggregation_query.append(project)
-        # aggregation_query.append(filter)
-        # aggregation_query.append({"$unwind": "$data"})
-        # aggregation_query.append({"$replaceRoot": {"newRoot": "$data.v"}})
-
-    # result = await collection.aggregate(aggregation_query).to_list(length=None)
-    result = await collection.find_one(filter, project)
-    # result = result[0]["data"]
+        result = await collection.find_one({nested_key: {"$exists": True}}, {"_id": 0})
+        if result is not None:
+            for component in path.strip("/").split("/"):
+                result = result[component]
 
     if (
         limitToFirst is not None
@@ -51,9 +40,7 @@ async def get_data(
         if orderBy is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "error": "orderBy must be defined when other query parameters are defined"
-                },
+                detail={"error": "orderBy must be defined when other query parameters are defined"},
             )
 
         if limitToFirst is not None and limitToLast is not None:

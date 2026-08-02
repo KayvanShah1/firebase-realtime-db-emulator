@@ -1,10 +1,9 @@
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Path, Query, status
-from app.api.v2.endpoints.utils import check_index, order_by_key, order_by_value
 
-from app.db.database import db, get_collection
-from app.schemas.data import GetDataResponse
+from app.api.v2.endpoints.utils import check_index, order_by_key, order_by_value
+from app.db.database import get_collection, get_database
 
 router = APIRouter()
 
@@ -60,9 +59,7 @@ async def query_data_root_v2(
         if orderBy is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "error": "orderBy must be defined when other query parameters are defined"
-                },
+                detail={"error": "orderBy must be defined when other query parameters are defined"},
             )
 
         if limitToFirst is not None and limitToLast is not None:
@@ -74,7 +71,7 @@ async def query_data_root_v2(
     # Set default result to empty dictionary
     result = {}
 
-    collections = await db.list_collection_names()
+    collections = await get_database().list_collection_names()
     # Filter out special collection names
     collections = [i for i in collections if i not in ["__fm_root__", "__fm_rules__"]]
     collections.sort()
@@ -89,14 +86,10 @@ async def query_data_root_v2(
     if orderBy == '"$key"':
         # StartAt & EndAt filters
         if startAt is not None or endAt is not None:
-            if not isinstance(startAt, (str, type(None))) or not isinstance(
-                endAt, (str, type(None))
-            ):
+            if not isinstance(startAt, (str, type(None))) or not isinstance(endAt, (str, type(None))):
                 raise HTTPException(
                     status_code=status.HTTP_200_OK,
-                    detail={
-                        "error": "Provided key index type is invalid, must be string"
-                    },
+                    detail={"error": "Provided key index type is invalid, must be string"},
                 )
             if type(startAt) is str:
                 if startAt.startswith('"') and startAt.endswith('"'):
@@ -133,9 +126,7 @@ async def query_data_root_v2(
         if index_ is None or ".value" not in index_:
             raise HTTPException(
                 status_code=status.HTTP_200_OK,
-                detail={
-                    "error": 'Index not defined, add ".indexOn": ".value", for path "/", to the rules'
-                },
+                detail={"error": 'Index not defined, add ".indexOn": ".value", for path "/", to the rules'},
             )
 
         for col in collections:
@@ -180,9 +171,7 @@ async def query_data_root_v2(
         if not index_ or orderBy not in index_:
             raise HTTPException(
                 status_code=status.HTTP_200_OK,
-                detail={
-                    "error": f'Index not defined, add ".indexOn": "{orderBy}", for path "/", to the rules'
-                },
+                detail={"error": f'Index not defined, add ".indexOn": "{orderBy}", for path "/", to the rules'},
             )
 
         if startAt is not None or endAt is not None or equalTo is not None:
@@ -264,9 +253,7 @@ async def query_data_v2(
         if orderBy is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "error": "orderBy must be defined when other query parameters are defined"
-                },
+                detail={"error": "orderBy must be defined when other query parameters are defined"},
             )
 
         if limitToFirst is not None and limitToLast is not None:
@@ -288,9 +275,7 @@ async def query_data_v2(
         key = ".".join(nested_components)
         nested_key = f"_fm_val.{key}".strip(".")
 
-        existing_data = await collection.find_one(
-            {"_fm_id": _fm_id, nested_key: {"$exists": True}}
-        )
+        existing_data = await collection.find_one({"_fm_id": _fm_id, nested_key: {"$exists": True}})
         if existing_data is not None:
             existing_data = existing_data["_fm_val"]
             for k in nested_components:
@@ -317,11 +302,7 @@ async def query_data_v2(
                         if type(equalTo) is str:
                             if equalTo.startswith('"') and equalTo.endswith('"'):
                                 equalTo = equalTo.strip('"')
-                        existing_data = (
-                            existing_data[int(equalTo)]
-                            if int(equalTo) <= len(existing_data)
-                            else None
-                        )
+                        existing_data = existing_data[int(equalTo)] if int(equalTo) <= len(existing_data) else None
 
                     # Limit Querying and Filtering
                     if limitToFirst is not None:
@@ -330,32 +311,24 @@ async def query_data_v2(
                         existing_data = existing_data[-limitToLast:]
 
                 elif type(existing_data) is dict:
-                    existing_data = sorted(
-                        existing_data.items(), key=lambda item: str(item[0])
-                    )
+                    existing_data = sorted(existing_data.items(), key=lambda item: str(item[0]))
 
                     if startAt is not None:
                         if type(startAt) is str:
                             if startAt.startswith('"') and startAt.endswith('"'):
                                 startAt = startAt.strip('"')
-                        existing_data = [
-                            (k, v) for k, v in existing_data if str(k) >= str(startAt)
-                        ]
+                        existing_data = [(k, v) for k, v in existing_data if str(k) >= str(startAt)]
                     if endAt is not None:
                         if type(endAt) is str:
                             if endAt.startswith('"') and endAt.endswith('"'):
                                 endAt = endAt.strip('"')
-                        existing_data = [
-                            (k, v) for k, v in existing_data if str(k) <= str(endAt)
-                        ]
+                        existing_data = [(k, v) for k, v in existing_data if str(k) <= str(endAt)]
 
                     if equalTo is not None:
                         if type(equalTo) is str:
                             if equalTo.startswith('"') and equalTo.endswith('"'):
                                 equalTo = equalTo.strip('"')
-                        existing_data = (
-                            (k, v) for k, v in existing_data if str(k) == equalTo
-                        )
+                        existing_data = ((k, v) for k, v in existing_data if str(k) == equalTo)
 
                     # Limit Querying and Filtering
                     if limitToFirst is not None:
@@ -389,24 +362,18 @@ async def query_data_v2(
                         if type(startAt) is str:
                             if startAt.startswith('"') and startAt.endswith('"'):
                                 startAt = startAt.strip('"')
-                        existing_data = [
-                            item for item in existing_data if str(item) >= str(startAt)
-                        ]
+                        existing_data = [item for item in existing_data if str(item) >= str(startAt)]
                     if endAt is not None:
                         if type(endAt) is str:
                             if endAt.startswith('"') and endAt.endswith('"'):
                                 endAt = endAt.strip('"')
-                        existing_data = [
-                            item for item in existing_data if str(item) <= str(endAt)
-                        ]
+                        existing_data = [item for item in existing_data if str(item) <= str(endAt)]
 
                     if equalTo is not None:
                         if type(equalTo) is str:
                             if equalTo.startswith('"') and equalTo.endswith('"'):
                                 equalTo = equalTo.strip('"')
-                        existing_data = [
-                            item for item in existing_data if str(item) == str(equalTo)
-                        ]
+                        existing_data = [item for item in existing_data if str(item) == str(equalTo)]
 
                     # Limit Querying and Filtering
                     if limitToFirst is not None:
@@ -428,9 +395,7 @@ async def query_data_v2(
                         if type(equalTo) is str:
                             if equalTo.startswith('"') and equalTo.endswith('"'):
                                 equalTo = equalTo.strip('"')
-                        existing_data = (
-                            (k, v) for k, v in existing_data if str(k) == equalTo
-                        )
+                        existing_data = ((k, v) for k, v in existing_data if str(k) == equalTo)
 
                     # Limit Querying and Filtering
                     if limitToFirst is not None:
@@ -479,14 +444,10 @@ async def query_data_v2(
         if orderBy == '"$key"':
             # StartAt & EndAt filters
             if startAt is not None or endAt is not None:
-                if not isinstance(startAt, (str, type(None))) or not isinstance(
-                    endAt, (str, type(None))
-                ):
+                if not isinstance(startAt, (str, type(None))) or not isinstance(endAt, (str, type(None))):
                     raise HTTPException(
                         status_code=status.HTTP_200_OK,
-                        detail={
-                            "error": "Provided key index type is invalid, must be string"
-                        },
+                        detail={"error": "Provided key index type is invalid, must be string"},
                     )
 
                 query = {}
@@ -517,9 +478,7 @@ async def query_data_v2(
             if index_ is None or ".value" not in index_:
                 raise HTTPException(
                     status_code=status.HTTP_200_OK,
-                    detail={
-                        "error": f'Index not defined, add ".indexOn": ".value", for path "/{path}", to the rules'
-                    },
+                    detail={"error": f'Index not defined, add ".indexOn": ".value", for path "/{path}", to the rules'},
                 )
 
             # Filters: startAt and endAt

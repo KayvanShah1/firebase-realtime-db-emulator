@@ -1,6 +1,6 @@
 docs/
 Spacefile
-test
+tests/
 .vscode/
 __pycache__/
 .space/

@@ -1,13 +1,11 @@
-from typing import Any, Optional
-from pydantic import BaseModel, BaseConfig
+from typing import Any
 
-from pydantic.fields import ModelField
-from pydantic.typing import is_union, get_args, get_origin
+from pydantic import BaseModel, RootModel
 
 
 class PostDataResponse(BaseModel):
     name: str
 
 
-class GetDataResponse(BaseModel):
-    __root__: Optional[Any | None] = None
+class GetDataResponse(RootModel[Any | None]):
+    root: Any | None = None

@@ -1,8 +1,8 @@
 import re
-
-from typing import Dict, List, Union, Any
-from fastapi import HTTPException, status
 from collections.abc import MutableMapping
+from typing import Any, Dict, List, Union
+
+from fastapi import HTTPException, status
 
 from app.db.database import get_collection
 
@@ -36,7 +36,7 @@ def _check_empty_payload(payload) -> Exception:
     """
     if payload is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Data cannot be None",
         )
 
@@ -54,7 +54,7 @@ def _check_data_type_for_root(data) -> Exception:
     """
     if type(data) is not dict:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "Invalid data; couldn't parse JSON object. Are you sending a JSON object with valid key names?"
             },
@@ -152,9 +152,7 @@ async def check_index(path: str = None):
     return None
 
 
-def get_items_between_indexes(
-    items: List[str], startAt: Union[str, int], endAt: Union[str, int]
-) -> List[str]:
+def get_items_between_indexes(items: List[str], startAt: Union[str, int], endAt: Union[str, int]) -> List[str]:
     """
     Get items between two indexes (inclusive).
 
@@ -171,12 +169,8 @@ def get_items_between_indexes(
         >>> get_items_between_indexes(items, "2", 98)
         ['2', '798', 'yuyuy', 98]
     """
-    start_index = next(
-        (i for i, item in enumerate(items) if str(item).startswith(startAt)), None
-    )
-    end_index = next(
-        (i for i, item in enumerate(items) if str(item).startswith(endAt)), None
-    )
+    start_index = next((i for i, item in enumerate(items) if str(item).startswith(startAt)), None)
+    end_index = next((i for i, item in enumerate(items) if str(item).startswith(endAt)), None)
 
     if start_index is None or end_index is None:
         return []
@@ -187,9 +181,7 @@ def get_items_between_indexes(
     return items[start_index : end_index + 1]
 
 
-def get_items_between_range(
-    items: List[str], startAt: Union[str, int, None], endAt: Union[str, int, None]
-) -> List:
+def get_items_between_range(items: List[str], startAt: Union[str, int, None], endAt: Union[str, int, None]) -> List:
     """Get items between two indexes (inclusive).
 
     Args:
@@ -213,15 +205,11 @@ def get_items_between_range(
         pattern = re.compile(f"^[{startAt}-{endAt}]" + "{1}", re.IGNORECASE)
         items = (item for i, item in enumerate(items) if pattern.search(item))
 
-    elif isinstance(startAt, (int, type(None))) and isinstance(
-        endAt, (int, type(None))
-    ):
+    elif isinstance(startAt, (int, type(None))) and isinstance(endAt, (int, type(None))):
         items = (
             item
             for i, item in enumerate(items)
-            if isinstance(item, int)
-            and (startAt is None or item >= startAt)
-            and (endAt is None or item <= endAt)
+            if isinstance(item, int) and (startAt is None or item >= startAt) and (endAt is None or item <= endAt)
         )
 
     else:
@@ -261,9 +249,7 @@ def order_by_key(items: List[str], startAt: Any = None, endAt: Any = None) -> Li
     return list(items)
 
 
-def order_by_value(
-    dictionary: Dict[Any, Any], startAt: Any = None, endAt: Any = None
-) -> Dict[Any, Any]:
+def order_by_value(dictionary: Dict[Any, Any], startAt: Any = None, endAt: Any = None) -> Dict[Any, Any]:
     """Sorts a dictionary by the values, and returns a new dictionary with the same keys, but sorted by the values.
 
     Args:
