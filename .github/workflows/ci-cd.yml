@@ -2,7 +2,15 @@ name: Test, build image, and deploy to Render
 
 "on":
   push:
+    paths:
+      - "app/**"
+      - "templates/**"
+      - ".github/workflows/**"
   pull_request:
+    paths:
+      - "app/**"
+      - "templates/**"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:

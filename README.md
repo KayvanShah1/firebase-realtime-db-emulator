@@ -155,7 +155,7 @@ ghcr.io/kayvanshah1/firebase-realtime-db-emulator:latest
 
 The workflow in `.github/workflows/ci-cd.yml` performs the following gated sequence:
 
-1. Every pull request and every branch push runs the Python 3.12 pytest suite plus Ruff lint and formatting checks.
+1. Pull requests and branch pushes run the Python 3.12 pytest suite plus Ruff lint and formatting checks when `app/**`, `templates/**`, or `.github/workflows/**` changes. Manual dispatch remains available for all other changes.
 2. Pull requests and non-default branch pushes build the `linux/amd64` runtime image without publishing it.
 3. Successful `main` pushes publish `latest`, branch, and immutable commit-SHA tags to GHCR.
 4. After the image is published, the default branch triggers the configured Render service and creates a GitHub deployment record.
