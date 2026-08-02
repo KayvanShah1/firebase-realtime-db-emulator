@@ -156,20 +156,19 @@ ghcr.io/kayvanshah1/firebase-realtime-db-emulator:latest
 The workflow in `.github/workflows/ci-cd.yml` performs the following gated sequence:
 
 1. Every pull request and every branch push runs the Python 3.12 pytest suite plus Ruff lint and formatting checks.
-2. Pull requests build the `linux/amd64` runtime image without publishing it.
-3. Successful branch pushes publish branch and immutable commit-SHA tags to GHCR. The default branch also publishes `latest`.
-4. A successful default-branch image triggers Render with its immutable digest when deployment is configured.
-
-The real-MongoDB test also runs on branch pushes when the optional repository secret `MONGODB_URI` is available. It remains disabled for untrusted pull requests and still uses its isolated temporary database.
+2. Pull requests and non-default branch pushes build the `linux/amd64` runtime image without publishing it.
+3. Successful `main` pushes publish `latest`, branch, and immutable commit-SHA tags to GHCR.
+4. After the image is published, the default branch triggers the configured Render service and creates a GitHub deployment record.
 
 ### Configure Render
 
 1. In Render, create an image-backed Web Service for `ghcr.io/kayvanshah1/firebase-realtime-db-emulator:latest` and set its health check path to `/health`.
 2. If the GHCR package is private, add a GitHub registry credential in Render using a personal access token with `read:packages`. A public package needs no registry credential.
 3. Add runtime secrets such as `MONGODB_URI` and `SECRET_KEY` in the Render service environment. The container automatically binds to Render's `PORT` value.
-4. Copy the service's deploy hook URL. In GitHub, create an environment named `render-production` and add the environment secret `RENDER_DEPLOY_HOOK_URL`.
+4. Disable Render Auto-Deploy because GitHub Actions owns the deployment trigger.
+5. In GitHub, create an environment named `render` and add `RENDER_SERVICE_ID` and `RENDER_API_KEY` as environment secrets. The service ID is shown on the Render service page; create the API key under Render Account Settings.
 
-Until `RENDER_DEPLOY_HOOK_URL` is added, tests and GHCR publishing continue normally and the deployment job reports that Render is not configured.
+Until both Render secrets are added, tests and GHCR publishing continue normally and the deployment job reports that Render is not configured.
 
 # About
 

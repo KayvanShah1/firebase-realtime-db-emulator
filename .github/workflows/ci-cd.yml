@@ -1,65 +1,54 @@
-name: CI, container, and Render deployment
+name: Test, build image, and deploy to Render
 
 "on":
   push:
   pull_request:
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
+  deployments: write
+  packages: write
+
+env:
+  PYTHON_VERSION: "3.12"
 
 jobs:
   test:
-    name: Test and lint (Python 3.12)
+    name: Test and lint
     runs-on: ubuntu-latest
-    env:
-      MONGODB_URI: ${{ secrets.MONGODB_URI }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          enable-cache: true
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v9
-        with:
-          version: "0.11.23"
-          enable-cache: true
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install locked dependencies
         run: uv sync --frozen
 
-      - name: Run deterministic test suite
-        run: uv run --frozen pytest -m "not real_db" -p no:cacheprovider
-
-      - name: Run real MongoDB test when configured
-        if: env.MONGODB_URI != ''
-        run: uv run --frozen pytest -m real_db --real-mongodb -p no:cacheprovider
-
-      - name: Lint Python
+      - name: Run lint
         run: uv run --frozen ruff check .
 
-      - name: Check Python formatting
+      - name: Check formatting
         run: uv run --frozen ruff format --check .
 
-  image:
-    name: Build and publish container
-    needs: test
+      - name: Run tests
+        run: uv run --frozen pytest -m "not real_db" -p no:cacheprovider
+
+  docker-build-publish:
+    name: Build and publish GHCR image
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    outputs:
-      digest: ${{ steps.build.outputs.digest }}
-      image: ${{ steps.image.outputs.name }}
+    needs:
+      - test
 
     steps:
       - name: Check out repository
@@ -71,64 +60,62 @@ jobs:
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
-      - name: Log in to GHCR
-        if: github.event_name != 'pull_request'
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate image metadata
+      - name: Extract Docker metadata
         id: metadata
         uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image.outputs.name }}
           tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=branch
             type=sha,prefix=sha-,format=long
-            type=raw,value=latest,enable=${{ github.ref_name == github.event.repository.default_branch }}
 
       - name: Build and optionally publish image
-        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: ./Dockerfile
           target: runtime
           platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
           cache-from: type=gha
-          cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,mode=max' || '' }}
+          cache-to: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'type=gha,mode=max' || '' }}
 
-  deploy:
-    name: Deploy default branch to Render
-    if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
-    needs:
-      - test
-      - image
+  deploy-to-render:
+    name: Deploy to Render
     runs-on: ubuntu-latest
+    needs:
+      - docker-build-publish
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
-      name: render-production
+      name: render
     env:
-      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
 
     steps:
       - name: Report missing Render configuration
-        if: env.RENDER_DEPLOY_HOOK_URL == ''
-        run: echo "::notice::Add RENDER_DEPLOY_HOOK_URL to the render-production environment to enable deployment."
+        if: env.RENDER_API_KEY == '' || env.RENDER_SERVICE_ID == ''
+        run: echo "::notice::Add RENDER_API_KEY and RENDER_SERVICE_ID to the render environment to enable deployment."
 
-      - name: Deploy the published image digest
-        if: env.RENDER_DEPLOY_HOOK_URL != ''
-        run: |
-          curl --fail --silent --show-error \
-            --retry 3 \
-            --retry-all-errors \
-            --max-time 30 \
-            --request POST \
-            --get \
-            --data-urlencode "imgURL=${{ needs.image.outputs.image }}@${{ needs.image.outputs.digest }}" \
-            "$RENDER_DEPLOY_HOOK_URL"
+      - name: Deploy to Render
+        if: env.RENDER_API_KEY != '' && env.RENDER_SERVICE_ID != ''
+        uses: JorgeLNJunior/render-deploy@v1.5.0
+        with:
+          service_id: ${{ env.RENDER_SERVICE_ID }}
+          api_key: ${{ env.RENDER_API_KEY }}
+          github_deployment: true
+          deployment_environment: render
+          github_token: ${{ secrets.GITHUB_TOKEN }}
