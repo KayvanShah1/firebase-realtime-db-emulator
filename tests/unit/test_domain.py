@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.domain.firebase_path import FirebasePath
-from app.domain.query import QuerySpec
+from app.domain.query import QuerySpec, decode_query_value
 
 pytestmark = pytest.mark.unit
 
@@ -62,3 +62,17 @@ def test_query_spec_reports_dependent_options_without_ordering():
 def test_query_spec_rejects_negative_limits():
     with pytest.raises(ValidationError):
         QuerySpec(limit_to_first=-1)
+
+
+@pytest.mark.parametrize(
+    ("raw_value", "decoded_value"),
+    [
+        ('"Ada"', "Ada"),
+        ("42", 42),
+        ("true", True),
+        ("plain-text", "plain-text"),
+        (None, None),
+    ],
+)
+def test_decode_query_value(raw_value, decoded_value):
+    assert decode_query_value(raw_value) == decoded_value
