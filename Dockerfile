@@ -1,24 +1,44 @@
-FROM python:3.12-slim
+# syntax=docker/dockerfile:1.7
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.23 /uv /uvx /bin/
+ARG PYTHON_IMAGE=python:3.12-slim-bookworm
 
-WORKDIR /usr/src/app
+FROM ghcr.io/astral-sh/uv:0.11.23 AS uv
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-ENV UV_COMPILE_BYTECODE=1
-ENV UV_LINK_MODE=copy
-ENV UV_PROJECT_ENVIRONMENT=/opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+FROM ${PYTHON_IMAGE} AS builder
+
+COPY --from=uv /uv /bin/uv
+
+ENV UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_PYTHON_DOWNLOADS=never
+
+WORKDIR /build
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
 
-COPY . .
+FROM ${PYTHON_IMAGE} AS runtime
+
+ENV PATH="/opt/venv/bin:$PATH" \
+    PORT=8080 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+RUN groupadd --system app && useradd --system --gid app --create-home app
+
+WORKDIR /app
+
+COPY --from=builder /opt/venv /opt/venv
+COPY --chown=app:app app ./app
+COPY --chown=app:app assets ./assets
+COPY --chown=app:app templates ./templates
+
+USER app
 
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=4)" || exit 1
+    CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen(f\"http://127.0.0.1:{os.getenv('PORT', '8080')}/health\", timeout=4)"]
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port \"${PORT:-8080}\""]

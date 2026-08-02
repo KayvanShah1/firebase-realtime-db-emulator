@@ -1,0 +1,134 @@
+name: CI, container, and Render deployment
+
+"on":
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test and lint (Python 3.12)
+    runs-on: ubuntu-latest
+    env:
+      MONGODB_URI: ${{ secrets.MONGODB_URI }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          version: "0.11.23"
+          enable-cache: true
+
+      - name: Install locked dependencies
+        run: uv sync --frozen
+
+      - name: Run deterministic test suite
+        run: uv run --frozen pytest -m "not real_db" -p no:cacheprovider
+
+      - name: Run real MongoDB test when configured
+        if: env.MONGODB_URI != ''
+        run: uv run --frozen pytest -m real_db --real-mongodb -p no:cacheprovider
+
+      - name: Lint Python
+        run: uv run --frozen ruff check .
+
+      - name: Check Python formatting
+        run: uv run --frozen ruff format --check .
+
+  image:
+    name: Build and publish container
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+      image: ${{ steps.image.outputs.name }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set lowercase GHCR image name
+        id: image
+        shell: bash
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image metadata
+        id: metadata
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-,format=long
+            type=raw,value=latest,enable=${{ github.ref_name == github.event.repository.default_branch }}
+
+      - name: Build and optionally publish image
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: runtime
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          cache-from: type=gha
+          cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,mode=max' || '' }}
+
+  deploy:
+    name: Deploy default branch to Render
+    if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
+    needs:
+      - test
+      - image
+    runs-on: ubuntu-latest
+    environment:
+      name: render-production
+    env:
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+
+    steps:
+      - name: Report missing Render configuration
+        if: env.RENDER_DEPLOY_HOOK_URL == ''
+        run: echo "::notice::Add RENDER_DEPLOY_HOOK_URL to the render-production environment to enable deployment."
+
+      - name: Deploy the published image digest
+        if: env.RENDER_DEPLOY_HOOK_URL != ''
+        run: |
+          curl --fail --silent --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --max-time 30 \
+            --request POST \
+            --get \
+            --data-urlencode "imgURL=${{ needs.image.outputs.image }}@${{ needs.image.outputs.digest }}" \
+            "$RENDER_DEPLOY_HOOK_URL"
