@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Body, HTTPException, status
 
 from app.repositories.indexes import IndexRepository
@@ -11,9 +13,9 @@ router = APIRouter()
     response_description="Successfully set the index for the provided path",
 )
 async def set_index(
-    path: str = None,
-    index_on: str | dict | list = Body(default=".value"),
-) -> dict | None:
+    index_on: Annotated[str | dict | list, Body()] = ".value",
+    path: str | None = None,
+) -> dict:
     """This route allows users to set an index for a specific path in their MongoDB collection. The user can provide a
     path and an index_on argument that can be either a string, a dictionary, or a list.
     """
@@ -25,7 +27,7 @@ async def set_index(
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully fetched data",
 )
-async def delete_index(path: str = None) -> None:
+async def delete_index(path: str | None = None) -> None:
     """This route allows users to delete an existing index for a specific path in their MongoDB collection. The user
     can provide a path for which the index needs to be deleted."""
 
@@ -35,13 +37,11 @@ async def delete_index(path: str = None) -> None:
             detail=f"Index `{IndexRepository.normalize_path(path)}` does not exist",
         )
 
-    return None
-
 
 @router.get(
     "/get-rules",
     status_code=status.HTTP_200_OK,
     response_description="Sucessfully fetched Index Rules",
 )
-async def get_rules() -> None:
+async def get_rules() -> dict:
     return await IndexRepository().list_rules()

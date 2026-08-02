@@ -41,7 +41,9 @@ class V2DataService:
             await self.repository.set_value(path.append(generated_id), data)
         return generated_id
 
-    async def put(self, path: FirebasePath, data: dict | int | float | str | list | bool) -> Any:
+    async def put(self, path: FirebasePath, data: Any) -> Any:
+        if data is None or not isinstance(data, (dict, int, float, str, list, bool)):
+            raise TypeError("Unsupported JSON value")
         if path.is_collection:
             if not isinstance(data, (dict, list)):
                 raise TypeError("Only dictionaries and lists can replace a collection")

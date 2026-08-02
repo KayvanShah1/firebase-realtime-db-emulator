@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, HTTPException, status
 
@@ -14,7 +14,7 @@ def empty_payload_error(error: EmptyV1PayloadError) -> HTTPException:
 
 
 @router.post("/.json", response_model=PostDataResponse, status_code=status.HTTP_200_OK)
-async def push_data_root(data: Any = Body(default=None)) -> dict:
+async def push_data_root(data: Annotated[Any, Body()] = None) -> dict:
     try:
         generated_id = await V1DataService().push_root(data)
     except EmptyV1PayloadError as error:
@@ -23,7 +23,7 @@ async def push_data_root(data: Any = Body(default=None)) -> dict:
 
 
 @router.put("/.json", status_code=status.HTTP_200_OK)
-async def put_data_root(data: dict | None = Body(default=None)) -> dict:
+async def put_data_root(data: Annotated[dict | None, Body()] = None) -> dict:
     try:
         return await V1DataService().put_root(data)
     except EmptyV1PayloadError as error:
@@ -40,7 +40,7 @@ async def delete_data_root() -> None:
     response_model=PostDataResponse,
     status_code=status.HTTP_200_OK,
 )
-async def post_data(path: str, data: Any = Body(default=None)) -> dict:
+async def post_data(path: str, data: Annotated[Any, Body()] = None) -> dict:
     try:
         generated_id = await V1DataService().push(FirebasePath.parse(path), data)
     except EmptyV1PayloadError as error:
@@ -49,7 +49,7 @@ async def post_data(path: str, data: Any = Body(default=None)) -> dict:
 
 
 @router.put("/{path:path}.json", status_code=status.HTTP_200_OK)
-async def put_data(path: str, data: Any = Body(default=None)) -> Any:
+async def put_data(path: str, data: Annotated[Any, Body()] = None) -> Any:
     try:
         return await V1DataService().put(FirebasePath.parse(path), data)
     except EmptyV1PayloadError as error:
@@ -57,7 +57,7 @@ async def put_data(path: str, data: Any = Body(default=None)) -> Any:
 
 
 @router.patch("/{path:path}.json", status_code=status.HTTP_200_OK)
-async def update_data(path: str, data: Any = Body(default=None)) -> Any:
+async def update_data(path: str, data: Annotated[Any, Body()] = None) -> Any:
     return await V1DataService().patch(FirebasePath.parse(path), data)
 
 

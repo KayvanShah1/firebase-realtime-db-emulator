@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, HTTPException, Path, status
 
@@ -15,7 +15,7 @@ router = APIRouter()
     response_model=PostDataResponse,
     response_description="Successfully created data document",
 )
-async def post_data_root_v2(data: dict = Body()) -> dict:
+async def post_data_root_v2(data: Annotated[dict, Body()]) -> dict:
     generated_id = await V2DataService().push_root(data)
     return {"name": generated_id}
 
@@ -25,7 +25,7 @@ async def post_data_root_v2(data: dict = Body()) -> dict:
     status_code=status.HTTP_200_OK,
     response_description="Successfully replaced root data",
 )
-async def put_data_root_v2(data: dict[str, dict] = Body()) -> dict:
+async def put_data_root_v2(data: Annotated[dict[str, dict], Body()]) -> dict:
     return await V2DataService().put_root(data)
 
 
@@ -44,7 +44,7 @@ async def delete_data_root_v2() -> None:
     response_model=PostDataResponse,
     response_description="Successfully created data document",
 )
-async def post_data_v2(path: str, data: Any = Body()) -> dict:
+async def post_data_v2(path: str, data: Annotated[Any, Body()]) -> dict:
     generated_id = await V2DataService().push(FirebasePath.parse(path), data)
     return {"name": generated_id}
 
@@ -56,8 +56,8 @@ async def post_data_v2(path: str, data: Any = Body()) -> dict:
 )
 async def put_data_v2(
     path: str,
-    data: dict | int | float | str | list | bool = Body(),
-) -> int | float | str | list | dict | bool:
+    data: Annotated[Any, Body()],
+) -> Any:
     try:
         return await V2DataService().put(FirebasePath.parse(path), data)
     except TypeError as error:
@@ -73,8 +73,8 @@ async def put_data_v2(
     response_description="Successfully updated data",
 )
 async def update_data_v2(
-    data: dict = Body(),
-    path: str = Path(description="Enter the path to update data"),
+    data: Annotated[dict, Body()],
+    path: Annotated[str, Path(description="Enter the path to update data")],
 ) -> dict:
     return await V2DataService().patch(FirebasePath.parse(path), data)
 
@@ -84,5 +84,5 @@ async def update_data_v2(
     status_code=status.HTTP_200_OK,
     response_description="Successfully deleted data",
 )
-async def delete_data_v2(path: str = Path(description="Enter the path to remove data")) -> None:
+async def delete_data_v2(path: Annotated[str, Path(description="Enter the path to remove data")]) -> None:
     await V2DataService().delete(FirebasePath.parse(path))
