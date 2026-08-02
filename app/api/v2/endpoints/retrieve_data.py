@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Path, Query, status
 
-from app.api.v2.endpoints.utils import check_index, order_by_key, order_by_value
+from app.api.v2.endpoints.utils import check_index, decode_query_value, order_by_key, order_by_value
 from app.db.database import get_collection, get_database
 
 router = APIRouter()
@@ -48,6 +48,10 @@ async def query_data_root_v2(
         - HTTPException with status code 200: If the provided key index type is invalid.
         - HTTPException with status code 200: If the index is not defined.
     """
+    equalTo = decode_query_value(equalTo)
+    startAt = decode_query_value(startAt)
+    endAt = decode_query_value(endAt)
+
     # Parameter validation and checks for violations
     if (
         limitToFirst is not None
@@ -242,6 +246,10 @@ async def query_data_v2(
         - HTTPException: If both limitToFirst and limitToLast are defined.
         - HTTPException: If the provided key index type is invalid and it's used to startAt or endAt filters.
     """
+    equalTo = decode_query_value(equalTo)
+    startAt = decode_query_value(startAt)
+    endAt = decode_query_value(endAt)
+
     # Parameter validation and checks for violations
     if (
         limitToFirst is not None

@@ -6,6 +6,7 @@ from app.api.v2.endpoints.utils import (
     _check_empty_payload as check_v2_payload,
 )
 from app.api.v2.endpoints.utils import (
+    decode_query_value,
     flatten_dict,
     get_items_between_range,
     order_by_key,
@@ -46,6 +47,20 @@ def test_ordering_helpers():
         "one": 1,
         "two": 2,
     }
+
+
+@pytest.mark.parametrize(
+    ("raw_value", "decoded_value"),
+    [
+        ('"Ada"', "Ada"),
+        ("42", 42),
+        ("true", True),
+        ("plain-text", "plain-text"),
+        (None, None),
+    ],
+)
+def test_decode_query_value(raw_value, decoded_value):
+    assert decode_query_value(raw_value) == decoded_value
 
 
 @pytest.mark.parametrize(

@@ -1,3 +1,4 @@
+import json
 import re
 from collections.abc import MutableMapping
 from typing import Any, Dict, List, Union
@@ -5,6 +6,17 @@ from typing import Any, Dict, List, Union
 from fastapi import HTTPException, status
 
 from app.db.database import get_collection
+
+
+def decode_query_value(value: Any) -> Any:
+    """Decode a Firebase query parameter encoded as a JSON scalar."""
+    if not isinstance(value, str):
+        return value
+
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return value
 
 
 async def _if_structure_exists(collection, key: str) -> bool:
