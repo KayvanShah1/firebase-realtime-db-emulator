@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import templates
+from app.api import health, templates
 from app.api.v1.api import api_router as api_v1_router
 from app.api.v2.api import api_router as api_v2_router
 from app.core.settings import settings
@@ -42,6 +42,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    application.include_router(health.router)
     application.include_router(templates.router)
     application.include_router(api_v1_router, prefix=settings.api_v1_prefix, deprecated=True)
     application.include_router(api_v2_router)

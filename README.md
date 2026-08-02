@@ -125,6 +125,14 @@ uv run pytest -m unit
 uv run pytest -m integration
 ```
 
+The real-database test is opt-in. It reads `MONGODB_URI`, creates a uniquely named temporary database, verifies the `/health` endpoint and original v2 demo flow, and removes every temporary collection when it finishes:
+
+```bash
+uv run pytest -m real_db --real-mongodb
+```
+
+The application exposes `GET /health` as a readiness check. It returns HTTP 200 only when MongoDB responds to a ping; unavailable database connections return HTTP 503. The Docker image uses this endpoint for its container health check.
+
 The original university presentation walkthrough is preserved in [docs/university-demo.md](docs/university-demo.md). Its CRUD, query, and index examples are automated in `tests/integration/test_demo_flow.py`.
 
 ## Deploy

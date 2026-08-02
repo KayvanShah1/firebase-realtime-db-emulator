@@ -37,6 +37,7 @@ testpaths = ["tests"]
 markers = [
     "unit: fast tests without HTTP or database integration",
     "integration: in-process API tests with an isolated database",
+    "real_db: opt-in tests against the configured MongoDB server",
 ]
 filterwarnings = [
     "ignore:datetime.datetime.utcfromtimestamp.*:DeprecationWarning:bson.datetime_ms",
