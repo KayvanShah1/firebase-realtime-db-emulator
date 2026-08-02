@@ -166,7 +166,7 @@ The workflow in `.github/workflows/ci-cd.yml` performs the following gated seque
 2. If the GHCR package is private, add a GitHub registry credential in Render using a personal access token with `read:packages`. A public package needs no registry credential.
 3. The container automatically binds to Render's `PORT` value. Add any additional runtime settings through the Render service environment.
 4. Disable Render Auto-Deploy because GitHub Actions owns the deployment trigger.
-5. In GitHub, create an environment named `render` and add `RENDER_SERVICE_ID` and `RENDER_API_KEY` as environment secrets. The service ID is shown on the Render service page; create the API key under Render Account Settings.
+5. In GitHub repository settings, add `RENDER_SERVICE_ID` and `RENDER_API_KEY` under Actions secrets. The service ID is shown on the Render service page; create the API key under Render Account Settings.
 
 Until both Render secrets are added, tests and GHCR publishing continue normally and the deployment job reports that Render is not configured.
 
