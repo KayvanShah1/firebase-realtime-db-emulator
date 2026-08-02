@@ -179,3 +179,64 @@ def test_write_routes_reject_missing_bodies(client, method):
     response = getattr(client, method)("/records.json")
 
     assert response.status_code == 422
+
+
+def test_nested_child_and_value_queries_support_combined_filters(client):
+    records = {
+        "a": {
+            "groups": {
+                "one": {"name": "Ada"},
+                "two": {"name": "Grace"},
+                "three": {"name": "Linus"},
+            },
+            "tags": {"a": "alpha", "b": "beta", "c": "gamma"},
+        }
+    }
+    assert client.put("/records.json", json=records).status_code == 200
+    assert client.put("/set-index", params={"path": "records/a/groups"}, json="name").status_code == 200
+    assert client.put("/set-index", params={"path": "records/a/tags"}, json=".value").status_code == 200
+
+    response = client.get(
+        "/records/a/groups.json",
+        params={"orderBy": '"name"', "startAt": '"Grace"', "limitToFirst": 2},
+    )
+    assert list(response.json()) == ["two", "three"]
+
+    response = client.get(
+        "/records/a/tags.json",
+        params={"orderBy": '"$value"', "equalTo": '"beta"', "limitToFirst": 1},
+    )
+    assert response.json() == {"b": "beta"}
+
+
+def test_nested_list_value_queries_are_ordered_and_limited(client):
+    assert client.put("/records.json", json={"a": {"values": [3, 1, 2]}}).status_code == 200
+    assert client.put("/set-index", params={"path": "records/a/values"}, json=".value").status_code == 200
+
+    response = client.get(
+        "/records/a/values.json",
+        params={"orderBy": '"$value"', "limitToFirst": 2},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == [1, 2]
+
+
+def test_root_key_query_uses_the_same_query_pipeline(client):
+    assert client.put("/.json", json={"z": {"one": 1}, "a": {"one": 2}, "m": {"one": 3}}).status_code == 200
+
+    response = client.get("/.json", params={"orderBy": '"$key"', "limitToFirst": 2})
+
+    assert response.status_code == 200
+    assert list(response.json()) == ["a", "m"]
+
+
+def test_query_reports_missing_indexes_consistently(client):
+    assert client.put("/records.json", json={"a": {"name": "Ada"}}).status_code == 200
+
+    response = client.get("/records.json", params={"orderBy": '"name"'})
+
+    assert response.status_code == 200
+    assert response.json()["detail"]["error"] == (
+        'Index not defined, add ".indexOn": "name", for path "/records", to the rules'
+    )

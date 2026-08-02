@@ -2,6 +2,7 @@ from typing import Any
 
 from app.db.database import get_collection, get_database
 from app.domain.firebase_path import FirebasePath
+from app.repositories.indexes import RULES_COLLECTION
 
 ID_FIELD = "_fm_id"
 VALUE_FIELD = "_fm_val"
@@ -60,6 +61,34 @@ class V2DataRepository:
         database = get_database()
         for collection_name in await database.list_collection_names():
             await get_collection(collection_name).drop()
+
+    async def read_root(self) -> dict:
+        collection_names = await get_database().list_collection_names()
+        collection_names = sorted(name for name in collection_names if name not in {"__fm_root__", RULES_COLLECTION})
+        return {name: await self.read_collection(name) for name in collection_names}
+
+    async def read_collection(self, collection_name: str) -> dict:
+        documents = await get_collection(collection_name).find({}, {"_id": 0}).sort(ID_FIELD, 1).to_list(length=None)
+        return {document[ID_FIELD]: document[VALUE_FIELD] for document in documents}
+
+    async def read(self, path: FirebasePath) -> Any:
+        if path.is_collection:
+            return await self.read_collection(path.collection)
+
+        document = await get_collection(path.collection).find_one(
+            {ID_FIELD: path.record_id},
+            {"_id": 0},
+        )
+        if document is None:
+            return None
+
+        value = document[VALUE_FIELD]
+        for segment in path.child_segments:
+            try:
+                value = value[int(segment)] if isinstance(value, list) else value[segment]
+            except (IndexError, KeyError, TypeError, ValueError):
+                return None
+        return value
 
     @staticmethod
     def encode_documents(data: dict | list) -> list[dict]:
