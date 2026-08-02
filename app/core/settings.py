@@ -1,66 +1,122 @@
-import os
-from dotenv import load_dotenv
 import secrets
+from functools import lru_cache
+from pathlib import Path
 
-load_dotenv()
-
-
-def getenv_boolean(var_name, default_value=False):
-    result = default_value
-    env_value = os.getenv(var_name)
-    if env_value is not None:
-        result = env_value.upper() in ("TRUE", "1")
-    return result
+from pydantic import EmailStr, Field, SecretStr, ValidationInfo, computed_field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-# Server Settings
-SERVER_NAME = os.getenv("SERVER_NAME")
-SERVER_HOST = os.getenv("SERVER_HOST")
+def find_project_root(
+    markers: tuple[str, ...] = ("pyproject.toml", ".git"),
+) -> Path:
+    """
+    Search upwards from the current file's directory to find the project root.
 
-# Project Settings
-APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BASE_DIR = os.path.dirname(APP_DIR)
+    This avoids fragile Path.parents[n] assumptions when files are moved.
+    """
+    current = Path(__file__).resolve().parent
 
-# Authentication & Security
-SECRET_KEY = os.getenv("SECRET_KEY", default=secrets.token_urlsafe(32))
-if not SECRET_KEY:
-    SECRET_KEY = os.urandom(32)
+    for parent in [current] + list(current.parents):
+        if any((parent / marker).exists() for marker in markers):
+            return parent
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 8
-BACKEND_CORS_ORIGINS = eval(os.getenv("BACKEND_CORS_ORIGINS"))
-ALGORITHM = os.getenv("ALGORITHM")
+    return Path.cwd().resolve()
 
-# General Details
-PROJECT_NAME = os.getenv("PROJECT_NAME", "FireMongo")
-API_V1_PREFIX = "/api/v1"
-API_V2_PREFIX = "/api/v2"
 
-# Database Settings
-MONGODB_URI = os.getenv("MONGODB_URI")
+PROJECT_ROOT = find_project_root()
+APP_DIR = PROJECT_ROOT / "app"
+BASE_DIR = PROJECT_ROOT
 
-# Templates Directory
-TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 
-# Static files like CSS & Media files
-STATIC_ROOT = os.path.join(BASE_DIR, "assets")
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=PROJECT_ROOT / ".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+        validate_default=True,
+    )
 
-# E-Mail Settings
-SMTP_TLS = getenv_boolean("SMTP_TLS", True)
-SMTP_SSL = getenv_boolean("SMTP_SSL", False)
-SMTP_PORT = None
-_SMTP_PORT = os.getenv("SMTP_PORT")
-if _SMTP_PORT is not None:
-    SMTP_PORT = int(_SMTP_PORT)
-SMTP_HOST = os.getenv("SMTP_HOST")
-SMTP_USER = os.getenv("SMTP_USER")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+    # Server
+    server_name: str | None = None
+    server_host: str | None = None
 
-EMAILS_FROM_EMAIL = os.getenv("EMAILS_FROM_EMAIL")
-EMAILS_FROM_NAME = PROJECT_NAME
-EMAIL_RESET_TOKEN_EXPIRE_HOURS = 48
-EMAIL_TEMPLATES_DIR = os.path.join(TEMPLATES_DIR, "email")
-EMAILS_ENABLED = SMTP_HOST and SMTP_PORT and EMAILS_FROM_EMAIL
+    # Project paths
+    project_root: Path = PROJECT_ROOT
+    app_dir: Path = APP_DIR
+    base_dir: Path = BASE_DIR
+    templates_dir: Path = BASE_DIR / "templates"
+    static_root: Path = BASE_DIR / "assets"
 
-EMAIL_TEST_USER = "test@example.com"
+    # Authentication and security
+    secret_key: SecretStr = Field(default_factory=lambda: secrets.token_urlsafe(32))
+    access_token_expire_minutes: int = 60 * 24 * 8
+    backend_cors_origins: list[str] = Field(default_factory=lambda: ["*"])
+    algorithm: str = "HS256"
 
-USERS_OPEN_REGISTRATION = getenv_boolean("USERS_OPEN_REGISTRATION")
+    # Application
+    project_name: str = "FireMongo"
+    api_v1_prefix: str = "/api/v1"
+    api_v2_prefix: str = "/api/v2"
+
+    # Database
+    mongodb_uri: SecretStr | None = None
+    database_name: str = "firebase_db"
+
+    # Email
+    smtp_tls: bool = True
+    smtp_ssl: bool = False
+    smtp_port: int | None = None
+    smtp_host: str | None = None
+    smtp_user: str | None = None
+    smtp_password: SecretStr | None = None
+    emails_from_email: EmailStr | None = None
+    emails_from_name: str | None = None
+    email_reset_token_expire_hours: int = 48
+    email_templates_dir: Path = BASE_DIR / "templates" / "email"
+    email_test_user: EmailStr = "test@example.com"
+
+    # Registration
+    users_open_registration: bool = False
+
+    @field_validator("secret_key", mode="before")
+    @classmethod
+    def generate_secret_key_when_empty(cls, value: object) -> object:
+        if value is None or value == "":
+            return secrets.token_urlsafe(32)
+        return value
+
+    @field_validator("emails_from_name")
+    @classmethod
+    def use_project_name_for_sender(cls, value: str | None, info: ValidationInfo) -> str:
+        return value or info.data["project_name"]
+
+    @computed_field
+    @property
+    def emails_enabled(self) -> bool:
+        return bool(self.smtp_host and self.smtp_port and self.emails_from_email)
+
+    def model_dump(self, **kwargs):
+        """Custom dump to make absolute paths relative for clean logging."""
+        dump = super().model_dump(**kwargs)
+        project_root = self.project_root.resolve()
+        for key, value in dump.items():
+            if isinstance(value, Path) and value.is_absolute():
+                try:
+                    dump[key] = str(value.relative_to(project_root))
+                except ValueError:
+                    dump[key] = str(value)
+        return dump
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()
+
+if __name__ == "__main__":
+    from rich.pretty import pprint
+
+    pprint(settings.model_dump())

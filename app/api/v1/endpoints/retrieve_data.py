@@ -1,14 +1,11 @@
-import uuid
-from typing import Optional
-import pymongo
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.encoders import jsonable_encoder
+from typing import Annotated, Any
 
-from app.db.database import get_collection, base_collection
-from app.crud.mongo import get_data
-from app.api.v1.endpoints.utils import (
-    replace_prefix,
-)
+from fastapi import APIRouter, Depends, status
+
+from app.api.dependencies import get_query_spec
+from app.domain.firebase_path import FirebasePath
+from app.domain.query import QuerySpec
+from app.services.v1_data import V1DataService
 
 router = APIRouter()
 
@@ -16,56 +13,21 @@ router = APIRouter()
 @router.get(
     "/.json",
     status_code=status.HTTP_200_OK,
-    response_description="Sucessfully fetched data",
+    response_description="Successfully fetched data",
 )
 async def query_data_root(
-    orderBy: Optional[str | None] = None,
-    limitToFirst: Optional[int | None] = None,
-    limitToLast: Optional[int | None] = None,
-    equalTo: Optional[int | str | None] = None,
-    startAt: Optional[int | str | None] = None,
-    endAt: Optional[int | str | None] = None,
-):
-    # collection = get_collection()
-    collection = base_collection
-    result = await get_data(
-        path=None,
-        collection=collection,
-        orderBy=orderBy,
-        limitToFirst=limitToFirst,
-        limitToLast=limitToLast,
-        equalTo=equalTo,
-        startAt=startAt,
-        endAt=endAt,
-    )
-    return result
+    query: Annotated[QuerySpec, Depends(get_query_spec)],
+) -> Any:
+    return await V1DataService().get()
 
 
 @router.get(
     "/{path:path}.json",
     status_code=status.HTTP_200_OK,
-    response_description="Sucessfully fetched data",
+    response_description="Successfully fetched data",
 )
 async def query_data(
+    query: Annotated[QuerySpec, Depends(get_query_spec)],
     path: str,
-    orderBy: Optional[str | None] = None,
-    limitToFirst: Optional[int | None] = None,
-    limitToLast: Optional[int | None] = None,
-    equalTo: Optional[int | str | None] = None,
-    startAt: Optional[int | str | None] = None,
-    endAt: Optional[int | str | None] = None,
-):
-    # collection = get_collection()
-    path = replace_prefix(path)
-    collection = base_collection
-    result = await get_data(
-        path=path,
-        collection=collection,
-        orderBy=orderBy,
-        limitToFirst=limitToFirst,
-        limitToLast=limitToLast,
-        equalTo=equalTo,
-        startAt=startAt,
-        endAt=endAt,
-    )
-    return result
+) -> Any:
+    return await V1DataService().get(FirebasePath.parse(path))
