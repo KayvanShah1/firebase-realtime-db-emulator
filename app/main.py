@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -13,7 +13,7 @@ from app.db.database import close_database, connect_database, is_database_config
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
     application_owns_database = not is_database_configured()
     if application_owns_database:
         mongodb_uri = settings.mongodb_uri.get_secret_value() if settings.mongodb_uri else None
