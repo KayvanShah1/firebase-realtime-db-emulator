@@ -9,6 +9,7 @@ from app.api.v2.endpoints.utils import (
     unwrap_path_to_dict,
 )
 from app.db.database import get_collection, get_database
+from app.domain.firebase_path import FirebasePath
 from app.schemas.data import PostDataResponse
 
 router = APIRouter()
@@ -152,9 +153,9 @@ async def delete_data_root_v2() -> None:
     response_description="Sucessfully created data document",
 )
 async def post_data_v2(path: str, data: dict | Any = Body(default=None)) -> dict:
-    # Recreate MongoDB style key
-    path_components = path.strip("/").split("/")
-    collection = get_collection(path_components[0])
+    firebase_path = FirebasePath.parse(path)
+    path_components = list(firebase_path.segments)
+    collection = get_collection(firebase_path.collection)
 
     # Create a new ID for data to insert
     random_id = uuid.uuid4().hex
@@ -252,10 +253,9 @@ async def put_data_v2(
     valid = True
     og_data = data
 
-    # Recreate MongoDB style key
-    path_components = path.strip("/").split("/")
-    # Collection name
-    collection = get_collection(path_components[0])
+    firebase_path = FirebasePath.parse(path)
+    path_components = list(firebase_path.segments)
+    collection = get_collection(firebase_path.collection)
 
     # Overwrite existing data at a key path
     if len(path_components) > 1:
@@ -353,8 +353,9 @@ async def update_data_v2(
     # Create a copy of data
     og_data = data
 
-    path_components = path.strip("/").split("/")
-    collection = get_collection(path_components[0])
+    firebase_path = FirebasePath.parse(path)
+    path_components = list(firebase_path.segments)
+    collection = get_collection(firebase_path.collection)
 
     # Updating data at a key path
     if len(path_components) > 1:
@@ -468,11 +469,12 @@ async def delete_data_v2(path: str = Path(description="Enter the path to remove 
         message "Internal Server Error".
     """
     valid = False
-    path_components = path.strip("/").split("/")
+    firebase_path = FirebasePath.parse(path)
+    path_components = list(firebase_path.segments)
 
     # Check if collection exists
-    if path_components[0] in await get_database().list_collection_names():
-        collection = get_collection(path_components[0])
+    if firebase_path.collection in await get_database().list_collection_names():
+        collection = get_collection(firebase_path.collection)
 
         if len(path_components) > 1:
             # Recreate MongoDB style key

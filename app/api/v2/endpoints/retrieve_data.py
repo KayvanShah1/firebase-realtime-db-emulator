@@ -1,9 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 
-from app.api.v2.endpoints.utils import check_index, decode_query_value, order_by_key, order_by_value
+from app.api.dependencies import get_query_spec
+from app.api.v2.endpoints.utils import check_index, order_by_key, order_by_value
 from app.db.database import get_collection, get_database
+from app.domain.firebase_path import FirebasePath
+from app.domain.query import QuerySpec
 
 router = APIRouter()
 
@@ -15,12 +18,7 @@ router = APIRouter()
     response_description="Sucessfully fetched data",
 )
 async def query_data_root_v2(
-    orderBy: Annotated[str | None, Query()] = None,
-    limitToFirst: Annotated[int | None, Query()] = None,
-    limitToLast: Annotated[int | None, Query()] = None,
-    equalTo: Annotated[int | str | None, Query()] = None,
-    startAt: Annotated[int | str | None, Query()] = None,
-    endAt: Annotated[int | str | None, Query()] = None,
+    query: Annotated[QuerySpec, Depends(get_query_spec)],
 ) -> dict | None:
     """This API endpoint fetches data from a MongoDB database based on various query parameters.
 
@@ -48,29 +46,12 @@ async def query_data_root_v2(
         - HTTPException with status code 200: If the provided key index type is invalid.
         - HTTPException with status code 200: If the index is not defined.
     """
-    equalTo = decode_query_value(equalTo)
-    startAt = decode_query_value(startAt)
-    endAt = decode_query_value(endAt)
-
-    # Parameter validation and checks for violations
-    if (
-        limitToFirst is not None
-        or limitToLast is not None
-        or equalTo is not None
-        or startAt is not None
-        and endAt is not None
-    ):
-        if orderBy is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "orderBy must be defined when other query parameters are defined"},
-            )
-
-        if limitToFirst is not None and limitToLast is not None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "limitToFirst and limitToLast cannot both be defined"},
-            )
+    orderBy = query.order_by
+    limitToFirst = query.limit_to_first
+    limitToLast = query.limit_to_last
+    equalTo = query.equal_to
+    startAt = query.start_at
+    endAt = query.end_at
 
     # Set default result to empty dictionary
     result = {}
@@ -215,13 +196,8 @@ async def query_data_root_v2(
     response_description="Sucessfully fetched data",
 )
 async def query_data_v2(
+    query: Annotated[QuerySpec, Depends(get_query_spec)],
     path: str = Path(description="Enter the path to retrieve data"),
-    orderBy: Annotated[str | None, Query()] = None,
-    limitToFirst: Annotated[int | None, Query()] = None,
-    limitToLast: Annotated[int | None, Query()] = None,
-    equalTo: Annotated[int | str | None, Query()] = None,
-    startAt: Annotated[int | str | None, Query()] = None,
-    endAt: Annotated[int | str | None, Query()] = None,
 ):
     """Retrieve data from the specified path of the MongoDB collection.
 
@@ -246,34 +222,16 @@ async def query_data_v2(
         - HTTPException: If both limitToFirst and limitToLast are defined.
         - HTTPException: If the provided key index type is invalid and it's used to startAt or endAt filters.
     """
-    equalTo = decode_query_value(equalTo)
-    startAt = decode_query_value(startAt)
-    endAt = decode_query_value(endAt)
+    orderBy = query.order_by
+    limitToFirst = query.limit_to_first
+    limitToLast = query.limit_to_last
+    equalTo = query.equal_to
+    startAt = query.start_at
+    endAt = query.end_at
 
-    # Parameter validation and checks for violations
-    if (
-        limitToFirst is not None
-        or limitToLast is not None
-        or equalTo is not None
-        or startAt is not None
-        and endAt is not None
-    ):
-        if orderBy is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "orderBy must be defined when other query parameters are defined"},
-            )
-
-        if limitToFirst is not None and limitToLast is not None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "limitToFirst and limitToLast cannot both be defined"},
-            )
-
-    # Recreate MongoDB style key
-    path_components = path.strip("/").split("/")
-    # Collection name
-    collection = get_collection(path_components[0])
+    firebase_path = FirebasePath.parse(path)
+    path_components = list(firebase_path.segments)
+    collection = get_collection(firebase_path.collection)
 
     # Fetching data within a document
     if len(path_components) > 1:

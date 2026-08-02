@@ -6,13 +6,13 @@ from app.api.v2.endpoints.utils import (
     _check_empty_payload as check_v2_payload,
 )
 from app.api.v2.endpoints.utils import (
-    decode_query_value,
     flatten_dict,
     get_items_between_range,
     order_by_key,
     order_by_value,
     unwrap_path_to_dict,
 )
+from app.domain.query import decode_query_value
 
 pytestmark = pytest.mark.unit
 

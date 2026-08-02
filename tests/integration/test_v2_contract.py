@@ -95,3 +95,11 @@ def test_query_rejects_conflicting_limits(client, ordered_records):
 
     assert response.status_code == 400
     assert response.json()["detail"]["error"] == "limitToFirst and limitToLast cannot both be defined"
+
+
+@pytest.mark.parametrize("query", [{"startAt": '"a"'}, {"endAt": '"c"'}])
+def test_query_bounds_require_ordering(client, ordered_records, query):
+    response = client.get("/records.json", params=query)
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["error"] == "orderBy must be defined when other query parameters are defined"
