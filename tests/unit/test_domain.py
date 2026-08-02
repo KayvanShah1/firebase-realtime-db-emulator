@@ -17,6 +17,7 @@ def test_firebase_path_exposes_storage_coordinates():
     assert path.mongo_value_path == "_fm_val.profile.name"
     assert path.mongo_parent_path == "_fm_val.profile"
     assert not path.is_collection
+    assert path.append("first").raw == "users/42/profile/name/first"
 
 
 def test_firebase_collection_path_has_no_record():

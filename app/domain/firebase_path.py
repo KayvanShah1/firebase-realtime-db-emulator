@@ -44,3 +44,6 @@ class FirebasePath:
     def mongo_parent_path(self) -> str:
         suffix = ".".join(self.child_segments[:-1])
         return f"_fm_val.{suffix}" if suffix else "_fm_val"
+
+    def append(self, relative_path: str) -> "FirebasePath":
+        return self.parse(f"{self.raw}/{relative_path}")

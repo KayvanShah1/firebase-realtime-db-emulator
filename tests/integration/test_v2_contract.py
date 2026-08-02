@@ -123,3 +123,59 @@ def test_index_rules_are_upserted_and_root_is_normalized(client):
         "records": ["name", "score"],
         "indexOn": ".value",
     }
+
+
+def test_deep_writes_target_the_existing_record(client):
+    assert client.put("/records.json", json={"a": {"profile": {"name": "Ada"}}}).status_code == 200
+
+    assert client.put("/records/a/profile/contact/email.json", json="ada@example.com").json() == "ada@example.com"
+    response = client.post("/records/a/profile/messages.json", json={"text": "hello"})
+    message_id = response.json()["name"]
+    assert (
+        client.patch(
+            "/records/a/profile.json",
+            json={"name": "Grace", "contact/phone": "1234"},
+        ).status_code
+        == 200
+    )
+
+    record = client.get("/records/a.json").json()
+    assert record == {
+        "profile": {
+            "name": "Grace",
+            "contact": {"email": "ada@example.com", "phone": "1234"},
+            "messages": {message_id: {"text": "hello"}},
+        }
+    }
+
+
+def test_patch_can_create_records_and_mix_direct_and_deep_paths(client):
+    assert (
+        client.patch(
+            "/records.json",
+            json={
+                "a": {"name": "Ada"},
+                "b/name": "Grace",
+                "b/contact/email": "grace@example.com",
+            },
+        ).status_code
+        == 200
+    )
+
+    assert client.get("/records.json").json() == {
+        "a": {"name": "Ada"},
+        "b": {"name": "Grace", "contact": {"email": "grace@example.com"}},
+    }
+
+
+def test_delete_is_idempotent_and_empty_collections_are_supported(client):
+    assert client.delete("/missing/path.json").status_code == 200
+    assert client.put("/empty.json", json={}).json() == {}
+    assert client.get("/empty.json").json() == {}
+
+
+@pytest.mark.parametrize("method", ["post", "put", "patch"])
+def test_write_routes_reject_missing_bodies(client, method):
+    response = getattr(client, method)("/records.json")
+
+    assert response.status_code == 422
