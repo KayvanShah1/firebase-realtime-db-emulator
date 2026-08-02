@@ -4,8 +4,6 @@ from typing import Any, Dict, List, Union
 
 from fastapi import HTTPException, status
 
-from app.db.database import get_collection
-
 
 async def _if_structure_exists(collection, key: str) -> bool:
     """
@@ -130,26 +128,6 @@ def unwrap_path_to_dict(data: dict) -> dict:
             current_dict = current_dict.setdefault(k, {})
         current_dict[keys[-1]] = value
     return nested_dict
-
-
-async def check_index(path: str = None):
-    """Retrieves the index expression for an existing index document for a given path in the __fm_rules__ collection.
-
-    Args:
-        path (str, optional): The path to retrieve the index for. Defaults to None.
-
-    Returns:
-        str | dict | list | None: The index expression if the index document exists for the given path, otherwise None.
-    """
-    index_collection = get_collection("__fm_rules__")
-
-    if path is None:
-        path = "__root__"
-
-    index_doc = await index_collection.find_one({"path": path})
-    if index_doc is not None:
-        return index_doc["indexOn"]
-    return None
 
 
 def get_items_between_indexes(items: List[str], startAt: Union[str, int], endAt: Union[str, int]) -> List[str]:

@@ -3,10 +3,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 from app.api.dependencies import get_query_spec
-from app.api.v2.endpoints.utils import check_index, order_by_key, order_by_value
+from app.api.v2.endpoints.utils import order_by_key, order_by_value
 from app.db.database import get_collection, get_database
 from app.domain.firebase_path import FirebasePath
 from app.domain.query import QuerySpec
+from app.repositories.indexes import IndexRepository
 
 router = APIRouter()
 
@@ -52,6 +53,7 @@ async def query_data_root_v2(
     equalTo = query.equal_to
     startAt = query.start_at
     endAt = query.end_at
+    index_repository = IndexRepository()
 
     # Set default result to empty dictionary
     result = {}
@@ -107,7 +109,7 @@ async def query_data_root_v2(
                     result[col].update({doc["_fm_id"]: doc["_fm_val"]})
 
     elif orderBy == '"$value"':
-        index_ = await check_index()
+        index_ = await index_repository.get()
         if index_ is None or ".value" not in index_:
             raise HTTPException(
                 status_code=status.HTTP_200_OK,
@@ -152,7 +154,7 @@ async def query_data_root_v2(
     elif type(orderBy) is str:
         if orderBy.startswith('"') and orderBy.endswith('"'):
             orderBy = orderBy.strip('"')
-        index_ = await check_index()
+        index_ = await index_repository.get()
         if not index_ or orderBy not in index_:
             raise HTTPException(
                 status_code=status.HTTP_200_OK,
@@ -228,6 +230,7 @@ async def query_data_v2(
     equalTo = query.equal_to
     startAt = query.start_at
     endAt = query.end_at
+    index_repository = IndexRepository()
 
     firebase_path = FirebasePath.parse(path)
     path_components = list(firebase_path.segments)
@@ -314,7 +317,7 @@ async def query_data_v2(
 
             # Ordering by Value
             elif orderBy == '"$value"':
-                index_ = await check_index(path)
+                index_ = await index_repository.get(path)
                 if index_ is None or ".value" not in index_:
                     raise HTTPException(
                         status_code=status.HTTP_200_OK,
@@ -383,7 +386,7 @@ async def query_data_v2(
             elif type(orderBy) is str:
                 if orderBy.startswith('"') and orderBy.endswith('"'):
                     orderBy = orderBy.strip('"')
-                index_ = await check_index(path)
+                index_ = await index_repository.get(path)
                 if index_ is None or orderBy not in index_:
                     raise HTTPException(
                         status_code=status.HTTP_200_OK,
@@ -440,7 +443,7 @@ async def query_data_v2(
 
         # Ordering by Value
         elif orderBy == '"$value"':
-            index_ = await check_index(path)
+            index_ = await index_repository.get(path)
             if index_ is None or ".value" not in index_:
                 raise HTTPException(
                     status_code=status.HTTP_200_OK,
@@ -474,7 +477,7 @@ async def query_data_v2(
         elif type(orderBy) is str:
             if orderBy.startswith('"') and orderBy.endswith('"'):
                 orderBy = orderBy.strip('"')
-            index_ = await check_index(path_components[0])
+            index_ = await index_repository.get(path_components[0])
             if index_ is None or orderBy not in index_:
                 raise HTTPException(
                     status_code=status.HTTP_200_OK,

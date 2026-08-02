@@ -103,3 +103,23 @@ def test_query_bounds_require_ordering(client, ordered_records, query):
 
     assert response.status_code == 400
     assert response.json()["detail"]["error"] == "orderBy must be defined when other query parameters are defined"
+
+
+def test_index_rules_are_upserted_and_root_is_normalized(client):
+    assert client.put("/set-index", params={"path": "records"}, json="name").json() == {
+        "path": "records",
+        "indexOn": "name",
+    }
+    assert client.put("/set-index", params={"path": "records"}, json=["name", "score"]).json() == {
+        "path": "records",
+        "indexOn": ["name", "score"],
+    }
+    assert client.put("/set-index", json=".value").json() == {
+        "path": "__root__",
+        "indexOn": ".value",
+    }
+
+    assert client.get("/get-rules").json() == {
+        "records": ["name", "score"],
+        "indexOn": ".value",
+    }

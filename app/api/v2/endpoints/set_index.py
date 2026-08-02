@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Body, HTTPException, status
 
-from app.db.database import get_collection
+from app.repositories.indexes import IndexRepository
 
 router = APIRouter()
 
@@ -17,35 +17,7 @@ async def set_index(
     """This route allows users to set an index for a specific path in their MongoDB collection. The user can provide a
     path and an index_on argument that can be either a string, a dictionary, or a list.
     """
-    if path is None:
-        path = "__root__"
-
-    index_collection = get_collection("__fm_rules__")
-
-    index_doc = await index_collection.find_one({"path": path})
-    if index_doc is not None:
-        _id = index_doc["_id"]
-
-        # Update existing sub-document
-        new_data = await index_collection.update_one(
-            {"_id": _id, "path": path},
-            {"$set": {"indexOn": index_on}},
-            upsert=True,
-        )
-        # Validate the upserted data
-        if new_data.modified_count > 0 or new_data.matched_count > 0 or new_data.upserted_id:
-            valid = True
-    else:
-        new_index = await index_collection.insert_one({"path": path, "indexOn": index_on})
-        valid = await index_collection.find_one({"_id": new_index.inserted_id}, {"_id": 0})
-
-    if not valid:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error",
-        )
-
-    return {"path": path, "indexOn": index_on}
+    return await IndexRepository().set(path, index_on)
 
 
 @router.delete(
@@ -57,19 +29,10 @@ async def delete_index(path: str = None) -> None:
     """This route allows users to delete an existing index for a specific path in their MongoDB collection. The user
     can provide a path for which the index needs to be deleted."""
 
-    if path is None:
-        path = "__root__"
-
-    index_collection = get_collection("__fm_rules__")
-
-    index_doc = await index_collection.find_one({"path": path})
-    if index_doc is not None:
-        _id = index_doc["_id"]
-        await index_collection.delete_one({"_id": _id})
-    else:
+    if not await IndexRepository().delete(path):
         raise HTTPException(
             status_code=status.HTTP_204_NO_CONTENT,
-            detail=f"Index `{path}` does not exist",
+            detail=f"Index `{IndexRepository.normalize_path(path)}` does not exist",
         )
 
     return None
@@ -81,13 +44,4 @@ async def delete_index(path: str = None) -> None:
     response_description="Sucessfully fetched Index Rules",
 )
 async def get_rules() -> None:
-    rules = {}
-    index_collection = get_collection("__fm_rules__")
-
-    index_docs = await index_collection.find({}, {"_id": 0}).to_list(length=None)
-    for index in index_docs:
-        if index["path"] == "__root__":
-            rules["indexOn"] = index["indexOn"]
-        else:
-            rules[index["path"]] = index["indexOn"]
-    return rules
+    return await IndexRepository().list_rules()
