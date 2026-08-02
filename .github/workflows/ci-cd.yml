@@ -6,6 +6,8 @@ name: Test, build image, and deploy to Render
       - "app/**"
       - "templates/**"
       - ".github/workflows/**"
+    branches:
+      - main
   pull_request:
     paths:
       - "app/**"
