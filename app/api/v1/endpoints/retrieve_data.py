@@ -1,8 +1,11 @@
-from fastapi import APIRouter, status
+from typing import Annotated, Any
 
-from app.api.v1.endpoints.utils import replace_prefix
-from app.crud.mongo import get_data
-from app.db.database import get_base_collection
+from fastapi import APIRouter, Depends, status
+
+from app.api.dependencies import get_query_spec
+from app.domain.firebase_path import FirebasePath
+from app.domain.query import QuerySpec
+from app.services.v1_data import V1DataService
 
 router = APIRouter()
 
@@ -10,56 +13,21 @@ router = APIRouter()
 @router.get(
     "/.json",
     status_code=status.HTTP_200_OK,
-    response_description="Sucessfully fetched data",
+    response_description="Successfully fetched data",
 )
 async def query_data_root(
-    orderBy: str | None = None,
-    limitToFirst: int | None = None,
-    limitToLast: int | None = None,
-    equalTo: int | str | None = None,
-    startAt: int | str | None = None,
-    endAt: int | str | None = None,
-):
-    # collection = get_collection()
-    collection = get_base_collection()
-    result = await get_data(
-        path=None,
-        collection=collection,
-        orderBy=orderBy,
-        limitToFirst=limitToFirst,
-        limitToLast=limitToLast,
-        equalTo=equalTo,
-        startAt=startAt,
-        endAt=endAt,
-    )
-    return result
+    query: Annotated[QuerySpec, Depends(get_query_spec)],
+) -> Any:
+    return await V1DataService().get()
 
 
 @router.get(
     "/{path:path}.json",
     status_code=status.HTTP_200_OK,
-    response_description="Sucessfully fetched data",
+    response_description="Successfully fetched data",
 )
 async def query_data(
+    query: Annotated[QuerySpec, Depends(get_query_spec)],
     path: str,
-    orderBy: str | None = None,
-    limitToFirst: int | None = None,
-    limitToLast: int | None = None,
-    equalTo: int | str | None = None,
-    startAt: int | str | None = None,
-    endAt: int | str | None = None,
-):
-    # collection = get_collection()
-    path = replace_prefix(path)
-    collection = get_base_collection()
-    result = await get_data(
-        path=path,
-        collection=collection,
-        orderBy=orderBy,
-        limitToFirst=limitToFirst,
-        limitToLast=limitToLast,
-        equalTo=equalTo,
-        startAt=startAt,
-        endAt=endAt,
-    )
-    return result
+) -> Any:
+    return await V1DataService().get(FirebasePath.parse(path))

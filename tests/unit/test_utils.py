@@ -1,7 +1,6 @@
 import pytest
 from fastapi import HTTPException
 
-from app.api.v1.endpoints.utils import _check_empty_payload as check_v1_payload
 from app.api.v2.endpoints.utils import (
     _check_empty_payload as check_v2_payload,
 )
@@ -63,12 +62,8 @@ def test_decode_query_value(raw_value, decoded_value):
     assert decode_query_value(raw_value) == decoded_value
 
 
-@pytest.mark.parametrize(
-    ("checker", "status_code"),
-    [(check_v1_payload, 400), (check_v2_payload, 422)],
-)
-def test_empty_payload_validation(checker, status_code):
+def test_empty_payload_validation():
     with pytest.raises(HTTPException) as error:
-        checker(None)
+        check_v2_payload(None)
 
-    assert error.value.status_code == status_code
+    assert error.value.status_code == 422
